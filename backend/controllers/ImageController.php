@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../models/PropertyImage.php';
 require_once __DIR__ . '/../utils/ImageProcessor.php';
+require_once __DIR__ . '/../utils/ErrorLogger.php';
 
 class ImageController {
     private $imageModel;
@@ -199,9 +200,22 @@ class ImageController {
                     if (file_exists($thumbnailPath)) {
                         unlink($thumbnailPath);
                     }
-                    error_log('[ImageController] Database insert failed, file deleted');
+                    
+                    // Log structured error for debugging
+                    $errorId = ErrorLogger::logValidationError(
+                        'ImageController::upload - DB Insert Failed',
+                        'Database insert failed for image record',
+                        [
+                            'property_id' => $propertyId,
+                            'filename' => $filename,
+                            'file_size' => $fileSize,
+                            'image_data' => $imageData
+                        ]
+                    );
+                    
+                    error_log('[ImageController] Database insert failed, file deleted [' . $errorId . ']');
                     http_response_code(500);
-                    echo json_encode(['success' => false, 'error' => 'Failed to save image record. File deleted.']);
+                    echo json_encode(['success' => false, 'error' => 'Failed to save image record']);
                 }
             } else {
                 $lastError = error_get_last();
@@ -215,8 +229,21 @@ class ImageController {
                 echo json_encode(['success' => false, 'error' => 'Failed to upload file']);
             }
         } catch (Throwable $e) {
-            error_log('[ImageController] Upload error: ' . $e->getMessage());
-            error_log('[ImageController] Stack trace: ' . $e->getTraceAsString());
+            // Log structured error with full details 
+            $errorId = ErrorLogger::logError(
+                'ImageController::upload - Server Error',
+                $e,
+                [
+                    'property_id' => $_POST['property_id'] ?? 'not_set',
+                    'file_name' => $_FILES['image']['name'] ?? 'not_set',
+                    'file_size' => $_FILES['image']['size'] ?? 0,
+                    'file_error' => $_FILES['image']['error'] ?? 'unknown',
+                    'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
+                    'content_type' => $_SERVER['CONTENT_TYPE'] ?? ''
+                ]
+            );
+            
+            error_log('[ImageController] Upload error: ' . $e->getMessage() . ' [' . $errorId . ']');
             http_response_code(500);
             echo json_encode(['success' => false, 'error' => 'Server error during upload']);
         }
