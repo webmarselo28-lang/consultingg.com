@@ -1,0 +1,40 @@
+AddHandler ${application/x-httpd-yogahonc-php83} .php .php5 .phtml .php7 .php8
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Force HTTPS
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # ===== API routing (IMPORTANT) =====
+  # Route /backend/api requests to backend/api/index.php
+  RewriteRule ^backend/api/?$ backend/api/index.php [L,QSA]
+  RewriteRule ^backend/api/(.*)$ backend/api/index.php [L,QSA]
+  
+  # Static file serving for uploads
+  RewriteRule ^uploads/(.*)$ uploads/$1 [L]
+
+  # Handle preflight requests for API
+  RewriteCond %{REQUEST_METHOD} OPTIONS
+  RewriteRule ^backend/api/(.*)$ backend/api/index.php [L]
+
+  # SPA fallback (do NOT catch api routes)
+  RewriteCond %{REQUEST_URI} !^/backend/api/
+  RewriteCond %{REQUEST_URI} !^/uploads/
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Cache static assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/webp "access plus 30 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType font/woff2 "access plus 30 days"
+  ExpiresByType font/woff "access plus 30 days"
+</IfModule>

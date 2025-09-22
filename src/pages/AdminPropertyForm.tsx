@@ -1,0 +1,959 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Upload, X, Star, Save } from 'lucide-react';
+import { apiService, PropertyFormData, Property } from '../services/api';
+import { getAllCities, PROPERTY_TYPES, getDistrictsForCity, CONSTRUCTION_TYPES, CONDITIONS, HEATING_TYPES, FURNISHING_LEVELS } from '../data/constants';
+
+interface AdminPropertyFormProps {
+  mode: 'create' | 'edit';
+}
+
+export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) => {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = mode === 'edit' && id;
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [images, setImages] = useState<Array<{ 
+    id?: string; 
+    url: string; 
+    file?: File; 
+    isMain: boolean;
+    sortOrder?: number;
+    altText?: string;
+    uploading?: boolean;
+    error?: string;
+  }>>([]);
+
+  const [formData, setFormData] = useState<PropertyFormData>({
+    title: '',
+    description: '',
+    property_code: '',
+    price: 0,
+    currency: 'EUR',
+    transaction_type: 'sale',
+    property_type: '',
+    city_region: 'София',
+    district: '',
+    address: '',
+    area: 0,
+    bedrooms: 0,
+    bathrooms: 0,
+    floors: 0,
+    floor_number: 0,
+    terraces: 0,
+    construction_type: '',
+    condition_type: '',
+    heating: '',
+    exposure: '',
+    year_built: new Date().getFullYear(),
+    furnishing_level: '',
+    has_elevator: false,
+    has_garage: false,
+    has_southern_exposure: false,
+    new_construction: false,
+    featured: false,
+    active: true,
+    pricing_mode: 'total'
+  });
+
+  const allCities = getAllCities();
+  const availableDistricts = getDistrictsForCity(formData.city_region);
+
+  useEffect(() => {
+    // Check authentication
+    if (!apiService.isAuthenticated()) {
+      navigate('/admin/login');
+      return;
+    }
+
+    if (isEdit && id) {
+      loadProperty(id);
+    }
+  }, [isEdit, id, navigate]);
+
+  const loadProperty = async (propertyId: string) => {
+    setLoading(true);
+    try {
+      const result = await apiService.getProperty(propertyId);
+      if (result.success && result.data) {
+        const property = result.data;
+        setFormData({
+          title: property.title,
+          description: property.description || '',
+          price: property.price,
+          currency: property.currency,
+          transaction_type: property.transaction_type,
+          property_type: property.property_type,
+          city_region: property.city_region,
+          district: property.district || '',
+          address: property.address || '',
+          area: property.area,
+          bedrooms: property.bedrooms,
+          bathrooms: property.bathrooms,
+          floors: property.floors || 0,
+          floor_number: property.floor_number || 0,
+          terraces: property.terraces,
+          construction_type: property.construction_type || '',
+          condition: property.condition_type || '',
+          heating: property.heating || '',
+          year_built: property.year_built || new Date().getFullYear(),
+          furnishing_level: property.furnishing_level || '',
+          has_elevator: property.has_elevator,
+          has_garage: property.has_garage,
+          has_southern_exposure: property.has_southern_exposure,
+          new_construction: property.new_construction,
+          featured: property.featured,
+          active: property.active,
+        });
+
+        // Set images
+        if (property.images) {
+          setImages(property.images.map((img: any) => ({
+            id: img.id,
+            url: img.image_url,
+            isMain: img.is_main,
+            sortOrder: img.sort_order,
+            altText: img.alt_text
+          })));
+        }
+      } else {
+        setError(result.error || 'Грешка при зареждане на имота');
+      }
+    } catch (error) {
+      setError('Грешка при зареждане на имота');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof PropertyFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    if (files.length === 0) return;
+    
+    // Check total images limit
+    if (images.length + files.length > 50) {
+      setError(`Не можете да качите повече от 50 снимки. Имате ${images.length}, опитвате да добавите ${files.length}.`);
+      return;
+    }
+    
+    // Process files and upload immediately if editing existing property
+    files.forEach((file) => {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setError(`Неподдържан формат на файл: ${file.type}. Моля използвайте JPEG, PNG или WebP.`);
+        return;
+      }
+      
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setError(`Файлът е твърде голям: ${(file.size / 1024 / 1024).toFixed(1)}MB. Максимум 10MB.`);
+        return;
+      }
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const newImage = {
+          url: event.target?.result as string,
+          file,
+          isMain: images.length === 0,
+          sortOrder: images.length,
+          altText: `Property image ${images.length + 1}`,
+          uploading: false
+        };
+        
+        setImages(prev => [...prev, newImage]);
+        
+        // If editing existing property, upload immediately
+        if (isEdit && id) {
+          uploadImageImmediately(file, id, images.length === 0);
+        }
+      };
+      reader.onerror = () => {
+        setError('Грешка при четене на файла');
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Clear the input so the same file can be selected again
+    e.target.value = '';
+    // Clear any previous errors
+    setError('');
+  };
+
+  const uploadImageImmediately = async (file: File, propertyId: string, isMain: boolean) => {
+    try {
+      // Set uploading state for this image
+      setImages(prev => prev.map((img, idx) => 
+        img.file === file ? { ...img, uploading: true, error: undefined } : img
+      ));
+      
+      console.log('Uploading image:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        propertyId,
+        isMain
+      });
+      
+      const result = await apiService.uploadImage(file, propertyId, isMain);
+      console.log('Upload result:', result);
+      
+      if (result.success) {
+        // Update the image with the server response
+        setImages(prev => prev.map((img, idx) => 
+          img.file === file ? { 
+            ...img, 
+            id: result.data.id,
+            url: result.data.url,
+            uploading: false,
+            file: undefined // Remove file reference after successful upload
+          } : img
+        ));
+      } else {
+        // Mark image as failed
+        setImages(prev => prev.map((img, idx) => 
+          img.file === file ? { ...img, uploading: false, error: result.error } : img
+        ));
+        console.error('Upload failed:', result.error);
+        setError(`Грешка при качване на снимката: ${result.error || 'Неизвестна грешка'}`);
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      // Mark image as failed
+      setImages(prev => prev.map((img, idx) => 
+        img.file === file ? { ...img, uploading: false, error: 'Грешка при качване' } : img
+      ));
+      setError(`Грешка при качване на снимката: ${error instanceof Error ? error.message : 'Неизвестна грешка'}`);
+    }
+  };
+
+  const removeImage = async (index: number) => {
+    const image = images[index];
+    
+    // If image has an ID, delete from server
+    if (image.id && isEdit && id) {
+      try {
+        console.log('Deleting image:', image.id, 'from property:', id);
+        const result = await apiService.deleteImage(id, image.id);
+        console.log('Delete result:', result);
+        if (result.success) {
+          // Remove from local state immediately
+          setImages(prev => {
+            const newImages = prev.filter((_, i) => i !== index);
+            // If we removed the main image, make the first one main
+            if (prev[index].isMain && newImages.length > 0) {
+              newImages[0].isMain = true;
+            }
+            return newImages;
+          });
+        } else {
+          setError(result.error || 'Грешка при изтриване на снимката');
+          return;
+        }
+      } catch (error) {
+        console.error('Error deleting image:', error);
+        setError('Грешка при изтриване на снимката');
+        return;
+      }
+    } else {
+      // Remove from local state only (for new uploads not yet saved)
+      setImages(prev => {
+        const newImages = prev.filter((_, i) => i !== index);
+        // If we removed the main image, make the first one main
+        if (prev[index].isMain && newImages.length > 0) {
+          newImages[0].isMain = true;
+        }
+        return newImages;
+      });
+    }
+  };
+
+  const setMainImage = async (index: number) => {
+    const image = images[index];
+    
+    // If image has an ID and we're editing, update on server
+    if (image.id && isEdit && id) {
+      try {
+        console.log('Setting main image:', image.id, 'for property:', id);
+        const result = await apiService.setMainImage(image.id, id);
+        console.log('Set main result:', result);
+        if (result.success) {
+          // Update local state immediately
+          setImages(prev => prev.map((img, i) => ({
+            ...img,
+            isMain: i === index
+          })));
+        } else {
+          setError(result.error || 'Грешка при задаване на главна снимка');
+          return;
+        }
+      } catch (error) {
+        console.error('Error setting main image:', error);
+        setError('Грешка при задаване на главна снимка');
+        return;
+      }
+    } else {
+      // Update local state only (for new uploads)
+      setImages(prev => prev.map((img, i) => ({
+        ...img,
+        isMain: i === index
+      })));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      let propertyCode: string;
+      let propertyId: string;
+      
+      if (isEdit && id) {
+        // Update existing property
+        const result = await apiService.updateProperty(id, formData);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update property');
+        }
+        propertyId = id;
+      } else {
+        // Create new property
+        const result = await apiService.createProperty(formData);
+        if (!result.success || !result.data) {
+          throw new Error(result.error || 'Failed to create property');
+        }
+        propertyId = result.data.id;
+      }
+
+      // Handle image uploads for new images
+      for (const image of images) {
+        if (image.file) {
+          try {
+            const uploadResult = await apiService.uploadImage(image.file, propertyId, image.isMain);
+            console.log('Image uploaded:', uploadResult);
+          } catch (error) {
+            console.error('Failed to upload image:', error);
+            // Continue with other images even if one fails
+          }
+        }
+      }
+
+      navigate('/admin');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Грешка при запазване на имота';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && isEdit) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/admin')}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                Назад
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {isEdit ? 'Редактиране на имот' : 'Добавяне на нов имот'}
+                </h1>
+                <p className="text-gray-600">
+                  {isEdit ? 'Редактирайте информацията за имота' : 'Попълнете всички полета за новия имот'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Basic Information */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Основна информация</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Заглавие *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => handleInputChange('title', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Например: Луксозен апартамент в центъра"
+                  required
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Описание
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Подробно описание на имота..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Код на имота
+                </label>
+                <input
+                  type="text"
+                  value={formData.property_code || ''}
+                  onChange={(e) => handleInputChange('property_code', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Например: PROP-001"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Тип сделка *
+                </label>
+                <select
+                  value={formData.transaction_type}
+                  onChange={(e) => handleInputChange('transaction_type', e.target.value as 'sale' | 'rent')}
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none transition-all duration-200 ${
+                    formData.transaction_type === 'rent'
+                      ? 'focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-sky-50/30'
+                      : 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                  required
+                >
+                  <option value="sale">🏠 Продажба</option>
+                  <option value="rent">🏡 Под наем</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Тип имот *
+                </label>
+                <select
+                  value={formData.property_type}
+                  onChange={(e) => handleInputChange('property_type', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Изберете тип</option>
+                  {PROPERTY_TYPES.map((type, index) => {
+                    const val = typeof type === 'string' ? type : (type.value ?? type.key ?? '');
+                    const k = typeof type === 'string' ? type : (type.key ?? type.value ?? String(index));
+                    return <option key={k} value={val}>{val}</option>;
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Цена * (€)
+                </label>
+                <input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => handleInputChange('price', Number(e.target.value))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0"
+                  required
+                  min="0"
+                />
+              </div>
+
+              {/* Per-sqm rent price field - only for rent properties */}
+              {formData.transaction_type === 'rent' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Цена на наем /м² (EUR)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.pricing_mode === 'per_sqm' ? formData.price : ''}
+                    onChange={(e) => {
+                      // Allow both comma and dot as decimal separator
+                      const value = e.target.value.replace(',', '.');
+                      if (value) {
+                        handleInputChange('price', parseFloat(value));
+                        handleInputChange('pricing_mode', 'per_sqm');
+                      } else {
+                        handleInputChange('pricing_mode', 'per_month');
+                      }
+                    }}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-sky-50/30"
+                    placeholder="8.00"
+                    min="0"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Оставете празно за месечна цена. Попълнете за цена на кв.м.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Площ * (м²)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.area}
+                  onChange={(e) => {
+                    // Allow both comma and dot as decimal separator
+                    const value = e.target.value.replace(',', '.');
+                    handleInputChange('area', value ? parseFloat(value) : 0);
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0"
+                  required
+                  min="0"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Location */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Локация</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Град *
+                </label>
+                <select
+                  value={formData.city_region}
+                  onChange={(e) => {
+                    handleInputChange('city_region', e.target.value);
+                    handleInputChange('district', ''); // Reset district when city changes
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  {allCities.map((city, index) => {
+                    const val = typeof city === 'string' ? city : (city.value ?? city.key ?? '');
+                    const k = typeof city === 'string' ? city : (city.key ?? city.value ?? String(index));
+                    return <option key={k} value={val}>{val}</option>;
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Квартал
+                </label>
+                <select
+                  value={formData.district}
+                  onChange={(e) => handleInputChange('district', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={availableDistricts.length === 0}
+                >
+                  <option value="">Изберете квартал</option>
+                  {availableDistricts.map((district, index) => {
+                    const val = typeof district === 'string' ? district : (district.value ?? district.key ?? '');
+                    const k = typeof district === 'string' ? district : (district.key ?? district.value ?? String(index));
+                    return <option key={k} value={val}>{val}</option>;
+                  })}
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Адрес
+                </label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="ул. Примерна 123"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Property Details */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Детайли за имота</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Спални
+                </label>
+                <input
+                  type="number"
+                  value={formData.bedrooms}
+                  onChange={(e) => handleInputChange('bedrooms', Number(e.target.value))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Бани
+                </label>
+                <input
+                  type="number"
+                  value={formData.bathrooms}
+                  onChange={(e) => handleInputChange('bathrooms', Number(e.target.value))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Тераси
+                </label>
+                <input
+                  type="number"
+                  value={formData.terraces}
+                  onChange={(e) => handleInputChange('terraces', Number(e.target.value))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Етаж на имота (незадължително)
+                </label>
+                <input
+                  type="number"
+                  value={formData.floor_number}
+                  onChange={(e) => handleInputChange('floor_number', Number(e.target.value))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="На кой етаж се намира"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Общо етажи в сградата (незадължително)
+                </label>
+                <input
+                  type="text"
+                  value={formData.floors}
+                  onChange={(e) => handleInputChange('floors', e.target.value ? Number(e.target.value) : undefined)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Общо етажи в сградата"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Изложение
+                </label>
+                <select
+                  value={formData.exposure || ''}
+                  onChange={(e) => handleInputChange('exposure', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Изберете изложение</option>
+                  <option value="Север">Север</option>
+                  <option value="Юг">Юг</option>
+                  <option value="Изток">Изток</option>
+                  <option value="Запад">Запад</option>
+                  <option value="Ю-И">Юг-Изток</option>
+                  <option value="Ю-З">Юг-Запад</option>
+                  <option value="С-И">Север-Изток</option>
+                  <option value="С-З">Север-Запад</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Година на строителство (незадължително)
+                </label>
+                <input
+                  type="text"
+                  value={formData.year_built}
+                  onChange={(e) => handleInputChange('year_built', e.target.value ? Number(e.target.value) : undefined)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder={new Date().getFullYear().toString()}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Вид строителство
+                </label>
+                <select
+                  value={formData.construction_type || ''}
+                  onChange={(e) => handleInputChange('construction_type', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Изберете вид</option>
+                  {CONSTRUCTION_TYPES.map((type, index) => {
+                    const val = typeof type === 'string' ? type : (type.value ?? type.key ?? '');
+                    const k = typeof type === 'string' ? type : (type.key ?? type.value ?? String(index));
+                    return <option key={k} value={val}>{val}</option>;
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Състояние
+                </label>
+                <select
+                  value={formData.condition_type || ''}
+                  onChange={(e) => handleInputChange('condition_type', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Изберете състояние</option>
+                  {CONDITIONS.map((condition, index) => {
+                    const val = typeof condition === 'string' ? condition : (condition.value ?? condition.key ?? '');
+                    const k = typeof condition === 'string' ? condition : (condition.key ?? condition.value ?? String(index));
+                    return <option key={k} value={val}>{val}</option>;
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Отопление
+                </label>
+                <select
+                  value={formData.heating || ''}
+                  onChange={(e) => handleInputChange('heating', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Изберете отопление</option>
+                  {HEATING_TYPES.map((heating, index) => {
+                    const val = typeof heating === 'string' ? heating : (heating.value ?? heating.key ?? '');
+                    const k = typeof heating === 'string' ? heating : (heating.key ?? heating.value ?? String(index));
+                    return <option key={k} value={val}>{val}</option>;
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ниво на обзавеждане
+                </label>
+                <select
+                  value={formData.furnishing_level || ''}
+                  onChange={(e) => handleInputChange('furnishing_level', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Изберете ниво</option>
+                  {FURNISHING_LEVELS.map((level, index) => {
+                    const val = typeof level === 'string' ? level : (level.value ?? level.key ?? '');
+                    const k = typeof level === 'string' ? level : (level.key ?? level.value ?? String(index));
+                    const label = typeof level === 'string' ? level : (level.label ?? level.value ?? level.key ?? '');
+                    return <option key={k} value={val}>{label}</option>;
+                  })}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Features */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Характеристики</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.has_elevator}
+                  onChange={(e) => handleInputChange('has_elevator', e.target.checked)}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Асансьор</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.has_garage}
+                  onChange={(e) => handleInputChange('has_garage', e.target.checked)}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Гараж</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.new_construction}
+                  onChange={(e) => handleInputChange('new_construction', e.target.checked)}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Ново строителство</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.featured}
+                  onChange={(e) => handleInputChange('featured', e.target.checked)}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Препоръчан имот</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.active}
+                  onChange={(e) => handleInputChange('active', e.target.checked)}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Активен</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Images */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Снимки</h2>
+            
+            <div className="mb-6">
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <Upload className="w-8 h-8 mb-4 text-gray-500" />
+                  <p className="mb-2 text-sm text-gray-500">
+                    <span className="font-semibold">Кликнете за качване</span> или плъзнете файловете
+                  </p>
+                  <p className="text-xs text-gray-500">PNG, JPG или JPEG (MAX. 10MB)</p>
+                </div>
+                <input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+              </label>
+            </div>
+
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {images.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={image.thumbnail_url || image.url}
+                      alt={`Property image ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-lg"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setMainImage(index)}
+                        className={`p-1 rounded ${
+                          image.isMain 
+                            ? 'bg-yellow-500 text-white' 
+                            : 'bg-white text-gray-700 hover:bg-yellow-500 hover:text-white'
+                        } disabled:opacity-50`}
+                        disabled={image.uploading}
+                      >
+                        <Star className="w-4 h-4" fill={image.isMain ? 'currentColor' : 'none'} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        disabled={image.uploading}
+                        className="p-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                        title="Премахни снимка"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {image.uploading && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      </div>
+                    )}
+                    {image.isMain && (
+                      <div className="absolute top-1 left-1 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                        Главна
+                      </div>
+                    )}
+                    {image.error && (
+                      <div className="absolute bottom-1 left-1 right-1 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                        Грешка
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+              {error}
+            </div>
+          )}
+
+          {/* Submit Buttons */}
+          <div className="flex items-center justify-end gap-4">
+            <button
+              type="button"
+              onClick={() => navigate('/admin')}
+              className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              Отказ
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  {isEdit ? 'Обнови имот' : 'Създай имот'}
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </main>
+    </div>
+  );
+};

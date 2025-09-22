@@ -1,0 +1,50 @@
+AddHandler ${application/x-httpd-yogahonc-php83} .php .php5 .phtml .php7 .php8
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Force HTTPS
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # ===== STATIC ASSETS FIRST (CRITICAL) =====
+  # Serve static assets directly - MUST come before API routing
+  RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|map)$ [NC]
+  RewriteRule ^ - [L]
+
+  # ===== API routing (IMPORTANT) =====
+  # Route /api requests to api/index.php
+  RewriteRule ^api/?$ api/index.php [L,QSA]
+  RewriteRule ^api/(.*)$ api/index.php [L,QSA]
+  
+  # Static file serving for uploads
+  RewriteRule ^uploads/(.*)$ uploads/$1 [L]
+
+  # Direct backend/api access (for compatibility) 
+  RewriteRule ^backend/api/?$ api/index.php [L,QSA]
+  RewriteRule ^backend/api/(.*)$ api/index.php [L,QSA]
+
+  # Handle preflight requests for API
+  RewriteCond %{REQUEST_METHOD} OPTIONS
+  RewriteRule ^(api|backend/api)/(.*)$ api/index.php [L]
+
+  # SPA fallback (do NOT catch backend routes)
+  RewriteCond %{REQUEST_URI} !^/api/
+  RewriteCond %{REQUEST_URI} !^/uploads/
+  RewriteCond %{REQUEST_URI} !^/assets/
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Cache static assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/webp "access plus 30 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType font/woff2 "access plus 30 days"
+  ExpiresByType font/woff "access plus 30 days"
+</IfModule>
