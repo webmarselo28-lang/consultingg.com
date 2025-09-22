@@ -3,6 +3,8 @@
 
 // Determine allowed origins based on environment
 $allowedOrigins = [
+    'http://localhost:5000',
+    'https://localhost:5000',
     'http://localhost:5173',
     'https://localhost:5173', 
     'https://consultingg.com',
@@ -14,8 +16,11 @@ $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowedOrigins)) {
     header("Access-Control-Allow-Origin: $origin");
 } else {
-    // Fallback for development
-    if (strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false) {
+    // Fallback for development and Replit
+    if (strpos($origin, 'localhost') !== false || 
+        strpos($origin, '127.0.0.1') !== false ||
+        strpos($origin, '.replit.dev') !== false ||
+        strpos($origin, 'replit.com') !== false) {
         header("Access-Control-Allow-Origin: $origin");
     } else {
         header('Access-Control-Allow-Origin: https://consultingg.com');

@@ -1483,6 +1483,67 @@ class ApiService {
       }
     ];
   }
+
+  // Image upload method for admin panel
+  async uploadPropertyImages(propertyId: string, files: File[]): Promise<ApiResponse<any[]>> {
+    try {
+      const uploadResults = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('property_id', propertyId);
+        formData.append('sort_order', i.toString());
+        formData.append('is_main', i === 0 ? 'true' : 'false');
+        formData.append('alt_text', `${file.name} - Property image`);
+
+        const response = await fetch(`${API_BASE}/images/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          },
+          body: formData
+        });
+
+        const result = await handleResponse(response);
+        uploadResults.push(result.data);
+      }
+
+      return {
+        success: true,
+        data: uploadResults
+      };
+    } catch (error) {
+      console.error('Upload error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      };
+    }
+  }
+
+  // Image delete method for admin panel
+  async deletePropertyImage(imageId: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${API_BASE}/images/${imageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        }
+      });
+
+      const result = await handleResponse(response);
+      return result;
+    } catch (error) {
+      console.error('Delete error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Delete failed'
+      };
+    }
+  }
 }
 
 export const apiService = new ApiService();

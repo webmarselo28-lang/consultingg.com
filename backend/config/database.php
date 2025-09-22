@@ -8,13 +8,24 @@ class Database {
     private static $instance = null;
 
     private function __construct() {
-        // PostgreSQL connection from environment
-        $host = $_ENV['DB_HOST'] ?? 'db.mveeovfztfczibtvkpas.supabase.co';
-        $dbname = $_ENV['DB_NAME'] ?? 'postgres';
-        $user = $_ENV['DB_USER'] ?? 'postgres';
-        $pass = $_ENV['DB_PASS'] ?? 'PoloSport88*';
-        $port = $_ENV['DB_PORT'] ?? '5432';
-        $sslmode = $_ENV['DB_SSLMODE'] ?? 'require';
+        // Parse DATABASE_URL if available (Replit style)
+        if (isset($_ENV['DATABASE_URL'])) {
+            $dbUrl = parse_url($_ENV['DATABASE_URL']);
+            $host = $dbUrl['host'] ?? 'localhost';
+            $port = $dbUrl['port'] ?? '5432';
+            $dbname = ltrim($dbUrl['path'] ?? '/postgres', '/');
+            $user = $dbUrl['user'] ?? 'postgres';
+            $pass = $dbUrl['pass'] ?? '';
+            $sslmode = 'require';
+        } else {
+            // Fallback to individual environment variables
+            $host = $_ENV['DB_HOST'] ?? $_ENV['PGHOST'] ?? 'db.mveeovfztfczibtvkpas.supabase.co';
+            $dbname = $_ENV['DB_NAME'] ?? $_ENV['PGDATABASE'] ?? 'postgres';
+            $user = $_ENV['DB_USER'] ?? $_ENV['PGUSER'] ?? 'postgres';
+            $pass = $_ENV['DB_PASS'] ?? $_ENV['PGPASSWORD'] ?? 'PoloSport88*';
+            $port = $_ENV['DB_PORT'] ?? $_ENV['PGPORT'] ?? '5432';
+            $sslmode = $_ENV['DB_SSLMODE'] ?? 'require';
+        }
 
         try {
             $this->connection = new PDO(
