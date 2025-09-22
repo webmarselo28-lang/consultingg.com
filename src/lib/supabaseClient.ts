@@ -4,23 +4,31 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
-}
+// Check if Supabase is available
+export const isSupabaseEnabled = !!(supabaseUrl && supabaseAnonKey);
 
-// Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  }
-});
+// Create Supabase client only if environment variables are available
+export const supabase = isSupabaseEnabled 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      }
+    })
+  : null;
+
+// Log Supabase status for debugging
+if (isSupabaseEnabled) {
+  console.log('Supabase client initialized successfully');
+} else {
+  console.warn('Supabase is disabled - environment variables VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY are missing');
+}
 
 // Database types (auto-generated from your schema)
 export interface Database {
@@ -260,4 +268,4 @@ export interface Database {
 }
 
 // Export typed client
-type SupabaseClient = typeof supabase;
+export type SupabaseClient = typeof supabase;
