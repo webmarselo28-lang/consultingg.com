@@ -3,8 +3,8 @@
 
 const API_BASE = (import.meta.env.VITE_API_BASE?.replace(/\/+$/, '') || '/api');
 
-// Force fallback mode in WebContainer environment
-const USE_FALLBACK = import.meta.env.DEV || window.location.hostname.includes('webcontainer') || window.location.hostname.includes('stackblitz');
+// Force fallback mode only in unsupported environments (not in Replit development)
+const USE_FALLBACK = window.location.hostname.includes('webcontainer') || window.location.hostname.includes('stackblitz');
 
 console.log('API_BASE configured as:', API_BASE, 'Fallback mode:', USE_FALLBACK);
 
@@ -68,6 +68,8 @@ interface PropertyImage {
   sort_order: number;
   is_main: boolean;
   created_at: string;
+  url: string;
+  thumbnail_url: string;
 }
 
 interface PropertyFormData {

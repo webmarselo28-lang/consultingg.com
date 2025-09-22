@@ -55,13 +55,24 @@ class ImageHelper {
     /**
      * Build fully qualified image URL
      */
-    public static function buildImageUrl($relativePath) {
+    public static function buildImageUrl($relativePath, $addCacheBust = true) {
         if (empty($relativePath)) {
             return null;
         }
         
-        // Get base URL from environment
-        $baseUrl = $_ENV['APP_URL'] ?? 'https://consultingg.com';
+        // Get base URL from environment - use Replit dev domain for development
+        $baseUrl = $_ENV['APP_URL'] ?? null;
+        
+        if (!$baseUrl) {
+            // Development: use Replit domain with port 5000
+            if (isset($_ENV['REPLIT_DEV_DOMAIN'])) {
+                $baseUrl = 'https://' . $_ENV['REPLIT_DEV_DOMAIN'];
+            } else {
+                // Fallback to localhost for local development
+                $baseUrl = 'http://localhost:5000';
+            }
+        }
+        
         $baseUrl = rtrim($baseUrl, '/');
         
         // Ensure path starts with /
@@ -74,11 +85,19 @@ class ImageHelper {
         $encodedParts = array_map('rawurlencode', $pathParts);
         $encodedPath = '/' . implode('/', $encodedParts);
         
-        return $baseUrl . $encodedPath;
+        $fullUrl = $baseUrl . $encodedPath;
+        
+        // Add cache-busting parameter
+        if ($addCacheBust) {
+            $separator = strpos($fullUrl, '?') !== false ? '&' : '?';
+            $fullUrl .= $separator . 'v=' . time();
+        }
+        
+        return $fullUrl;
     }
     
     /**
-     * Process images array and add computed URL field
+     * Process images array and add computed URL fields
      */
     public static function processImages($images) {
         if (!is_array($images)) {
@@ -89,8 +108,15 @@ class ImageHelper {
         
         foreach ($images as $image) {
             if (is_array($image)) {
-                // Add computed URL field
+                // Add computed URL field with cache-busting
                 $image['url'] = self::buildImageUrl($image['image_url'] ?? '');
+                
+                // Add thumbnail_url if image_url exists
+                if (!empty($image['image_url'])) {
+                    $thumbnailPath = self::generateThumbnailPath($image['image_url']);
+                    $image['thumbnail_url'] = self::buildImageUrl($thumbnailPath);
+                }
+                
                 $processedImages[] = $image;
             }
         }
@@ -113,6 +139,22 @@ class ImageHelper {
         });
         
         return $processedImages;
+    }
+    
+    /**
+     * Generate thumbnail path from original image path
+     */
+    public static function generateThumbnailPath($imagePath) {
+        if (empty($imagePath)) {
+            return '';
+        }
+        
+        $pathInfo = pathinfo($imagePath);
+        $directory = $pathInfo['dirname'];
+        $filename = $pathInfo['filename'];
+        $extension = $pathInfo['extension'] ?? 'jpg';
+        
+        return $directory . '/' . $filename . '_thumb.' . $extension;
     }
 }
 ?>
