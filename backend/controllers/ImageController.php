@@ -21,6 +21,9 @@ class ImageController {
 
     public function upload() {
         try {
+            // Set JSON content type header
+            header('Content-Type: application/json; charset=utf-8');
+            
             require_once __DIR__ . '/../middleware/auth.php';
             // Skip auth for demo mode
             if (!isset($_ENV['WEBCONTAINER_ENV']) && !isset($_ENV['DEMO_MODE'])) {
@@ -222,6 +225,9 @@ class ImageController {
 
     public function delete($id) {
         try {
+            // Set JSON content type header
+            header('Content-Type: application/json; charset=utf-8');
+            
             require_once __DIR__ . '/../middleware/auth.php';
             // Skip auth for demo mode
             if (!isset($_ENV['WEBCONTAINER_ENV']) && !isset($_ENV['DEMO_MODE'])) {
