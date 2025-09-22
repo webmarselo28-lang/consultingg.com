@@ -1,10 +1,12 @@
 <?php
 require_once __DIR__ . '/../models/PropertyImage.php';
+require_once __DIR__ . '/../models/Property.php';
 require_once __DIR__ . '/../utils/ImageProcessor.php';
 require_once __DIR__ . '/../utils/ErrorLogger.php';
 
 class ImageController {
     private $imageModel;
+    private $propertyModel;
     
     // Configurable upload paths
     private $uploadsFS;
@@ -12,6 +14,7 @@ class ImageController {
 
     public function __construct() {
         $this->imageModel = new PropertyImage();
+        $this->propertyModel = new Property();
         
         // FS base for uploaded files (absolute)
         $this->uploadsFS = $_ENV['UPLOADS_FS_BASE'] ?? realpath(__DIR__ . '/../../uploads') ?: __DIR__ . '/../../uploads';
@@ -70,17 +73,41 @@ class ImageController {
             }
 
             $file = $_FILES['image'];
-            $propertyId = $_POST['property_id'];
+            $propertyId = trim($_POST['property_id']);
             $sortOrder = $_POST['sort_order'] ?? 0;
             $isMain = isset($_POST['is_main']) ? (bool)$_POST['is_main'] : false;
+            
+            // Step 1: Validate property_id exists
+            if (empty($propertyId)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Property ID is required and cannot be empty']);
+                exit;
+            }
+            
+            $property = $this->propertyModel->getById($propertyId);
+            if (!$property) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Property not found. Please verify the property ID exists.']);
+                exit;
+            }
             $altText = $_POST['alt_text'] ?? '';
 
-            // Validate image using ImageProcessor
-            $validationErrors = ImageProcessor::validateImage($file);
+            // Step 2: Enhanced file validation with specific HTTP status codes
+            $validationErrors = ImageProcessor::validateImage($file, 10485760); // 10MB max
             if (!empty($validationErrors)) {
                 error_log('[ImageController] Validation errors: ' . implode(', ', $validationErrors));
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => implode(', ', $validationErrors)]);
+                
+                // Map specific validation errors to appropriate HTTP status codes
+                $errorMessage = implode(', ', $validationErrors);
+                if (strpos($errorMessage, 'too large') !== false) {
+                    http_response_code(413); // Payload Too Large
+                } elseif (strpos($errorMessage, 'Invalid file type') !== false) {
+                    http_response_code(415); // Unsupported Media Type
+                } else {
+                    http_response_code(400); // Bad Request
+                }
+                
+                echo json_encode(['success' => false, 'error' => $errorMessage]);
                 exit;
             }
 
@@ -98,16 +125,25 @@ class ImageController {
                 exit;
             }
 
-            // Create property-specific directory
-            $propertyDirFS = rtrim($this->uploadsFS, '/\\') . "/properties/$propertyId/";
-            $propertyUrlBase = rtrim($this->uploadsPublic, '/\\') . "/properties/$propertyId/";
+            // Step 3: Ensure destination folder exists and is writable
+            $propertyDirFS = rtrim($this->uploadsFS, '/\\') . "/properties/$propertyId";
+            $propertyUrlBase = rtrim($this->uploadsPublic, '/\\') . "/properties/$propertyId";
+            
+            // Check parent directory exists and is writable first
+            $parentDir = dirname($propertyDirFS);
+            if (!is_dir($parentDir) || !is_writable($parentDir)) {
+                error_log('[ImageController] Parent directory not accessible: ' . $parentDir);
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Upload directory not accessible']);
+                exit;
+            }
             
             if (!is_dir($propertyDirFS)) {
                 if (!mkdir($propertyDirFS, 0755, true)) {
                     $lastError = error_get_last();
                     error_log('[ImageController] Failed to create directory: ' . $propertyDirFS);
                     error_log('[ImageController] Last error: ' . ($lastError['message'] ?? 'Unknown'));
-                    error_log('[ImageController] Parent writable: ' . (is_writable(dirname($propertyDirFS)) ? 'YES' : 'NO'));
+                    error_log('[ImageController] Parent writable: ' . (is_writable($parentDir) ? 'YES' : 'NO'));
                     http_response_code(500);
                     echo json_encode(['success' => false, 'error' => 'Failed to create upload directory']);
                     exit;
@@ -115,7 +151,7 @@ class ImageController {
                 error_log('[ImageController] Created directory: ' . $propertyDirFS);
             }
             
-            // Check if directory is writable
+            // Final writability check
             if (!is_writable($propertyDirFS)) {
                 error_log('[ImageController] Directory not writable: ' . $propertyDirFS);
                 error_log('[ImageController] Directory permissions: ' . substr(sprintf('%o', fileperms($propertyDirFS)), -4));
@@ -126,14 +162,18 @@ class ImageController {
 
             require_once __DIR__ . '/../utils/ImageHelper.php';
             $filename = ImageHelper::safeFilename($file['name'], $propertyId);
-            $filePath = $propertyDirFS . $filename;
+            $filePath = $propertyDirFS . '/' . $filename;
             $thumbnailFilename = pathinfo($filename, PATHINFO_FILENAME) . '_thumb.' . pathinfo($filename, PATHINFO_EXTENSION);
-            $thumbnailPath = $propertyDirFS . $thumbnailFilename;
+            $thumbnailPath = $propertyDirFS . '/' . $thumbnailFilename;
+            
+            // Step 4: Atomic operations - Track files created for potential rollback
+            $createdFiles = [];
 
             error_log('[ImageController] Attempting to move file to: ' . $filePath);
             
             if (move_uploaded_file($file['tmp_name'], $filePath)) {
                 error_log('[ImageController] File moved successfully');
+                $createdFiles[] = $filePath; // Track for rollback
                 
                 // Verify file was actually created
                 if (!file_exists($filePath)) {
@@ -153,7 +193,10 @@ class ImageController {
                 // Create thumbnail
                 try {
                     $thumbnailInfo = ImageProcessor::createThumbnail($filePath, $thumbnailPath, 'medium');
-                    error_log('[ImageController] Thumbnail created: ' . json_encode($thumbnailInfo));
+                    if (file_exists($thumbnailPath)) {
+                        $createdFiles[] = $thumbnailPath; // Track thumbnail for rollback
+                        error_log('[ImageController] Thumbnail created: ' . json_encode($thumbnailInfo));
+                    }
                 } catch (Exception $e) {
                     error_log('[ImageController] Thumbnail creation failed: ' . $e->getMessage());
                     // Continue without thumbnail - not critical
@@ -195,25 +238,28 @@ class ImageController {
                         ]
                     ]);
                 } else {
-                    // Delete uploaded file if database insert failed
-                    unlink($filePath);
-                    if (file_exists($thumbnailPath)) {
-                        unlink($thumbnailPath);
+                    // Atomic rollback: Delete all uploaded files if database insert failed
+                    foreach ($createdFiles as $fileToDelete) {
+                        if (file_exists($fileToDelete)) {
+                            unlink($fileToDelete);
+                            error_log('[ImageController] Rolled back file: ' . $fileToDelete);
+                        }
                     }
                     
                     // Log structured error for debugging
                     $errorId = ErrorLogger::logValidationError(
                         'ImageController::upload - DB Insert Failed',
-                        'Database insert failed for image record',
+                        'Database insert failed for image record, files rolled back',
                         [
                             'property_id' => $propertyId,
                             'filename' => $filename,
                             'file_size' => $fileSize,
+                            'rolled_back_files' => $createdFiles,
                             'image_data' => $imageData
                         ]
                     );
                     
-                    error_log('[ImageController] Database insert failed, file deleted [' . $errorId . ']');
+                    error_log('[ImageController] Database insert failed, all files rolled back [' . $errorId . ']');
                     http_response_code(500);
                     echo json_encode(['success' => false, 'error' => 'Failed to save image record']);
                 }
