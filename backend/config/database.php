@@ -1,8 +1,5 @@
 <?php
 
-use PDO;
-use PDOException;
-
 class Database {
     private $connection;
     private static $instance = null;
@@ -18,11 +15,11 @@ class Database {
             $pass = $dbUrl['pass'] ?? '';
             $sslmode = 'require';
         } else {
-            // Fallback to individual environment variables
-            $host = $_ENV['DB_HOST'] ?? $_ENV['PGHOST'] ?? 'db.mveeovfztfczibtvkpas.supabase.co';
+            // Fallback to individual environment variables - NO HARDCODED CREDENTIALS
+            $host = $_ENV['DB_HOST'] ?? $_ENV['PGHOST'] ?? 'localhost';
             $dbname = $_ENV['DB_NAME'] ?? $_ENV['PGDATABASE'] ?? 'postgres';
             $user = $_ENV['DB_USER'] ?? $_ENV['PGUSER'] ?? 'postgres';
-            $pass = $_ENV['DB_PASS'] ?? $_ENV['PGPASSWORD'] ?? 'PoloSport88*';
+            $pass = $_ENV['DB_PASS'] ?? $_ENV['PGPASSWORD'] ?? '';
             $port = $_ENV['DB_PORT'] ?? $_ENV['PGPORT'] ?? '5432';
             $sslmode = $_ENV['DB_SSLMODE'] ?? 'require';
         }
@@ -39,7 +36,7 @@ class Database {
                 ]
             );
             
-            if ($_ENV['APP_DEBUG'] === 'true') {
+            if (isset($_ENV['APP_DEBUG']) && $_ENV['APP_DEBUG'] === 'true') {
                 error_log('[DB] Connected successfully to PostgreSQL: ' . $dbname . ' on ' . $host);
             }
         } catch (PDOException $exception) {
