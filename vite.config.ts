@@ -8,11 +8,7 @@ export default defineConfig({
     host: true,
     port: 5000,
     strictPort: true,
-    allowedHosts: [
-      '*.replit.dev',
-      'localhost',
-      '127.0.0.1',
-    ],
+    allowedHosts: true,
     proxy: {
       '/api': 'http://localhost:8080'
     },
