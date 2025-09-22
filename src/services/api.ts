@@ -291,20 +291,47 @@ class ApiService {
   }
 
   async getProperty(id: string): Promise<ApiResponse<Property>> {
+    console.log('API: getProperty called for', id);
+    
+    // Always try API first, fallback to local data if needed
     try {
       const response = await fetch(`${API_BASE}/properties/${id}`, {
         headers: this.getAuthHeaders()
       });
 
-      return await handleResponse(response);
-    } catch (error) {
-      console.error('API error in getProperty:', error);
+      const result = await handleResponse(response);
+      console.log('API: getProperty response', result);
       
-      // Fallback to local data
+      if (result.success && result.data) {
+        console.log('API: Property found with images:', result.data.images?.length || 0);
+        return result;
+      }
+      
+      // If API didn't work, try fallback
+      console.log('API: Property not found, trying fallback');
       const properties = this.getLocalProperties();
       const property = properties.find(p => p.id === id);
       
       if (property) {
+        console.log('Fallback: Property found with images:', property.images?.length || 0);
+        return { success: true, data: property };
+      }
+      
+      return {
+        success: false,
+        error: 'Имотът не е намерен'
+      };
+      
+    } catch (error) {
+      console.error('API error in getProperty:', error);
+      
+      // Fallback to local data
+      console.log('API: Error occurred, using fallback');
+      const properties = this.getLocalProperties();
+      const property = properties.find(p => p.id === id);
+      
+      if (property) {
+        console.log('Fallback: Property found with images:', property.images?.length || 0);
         return { success: true, data: property };
       } else {
         return {

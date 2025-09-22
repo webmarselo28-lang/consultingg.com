@@ -18,8 +18,11 @@ export const PropertyDetail: React.FC = () => {
       
       try {
         setLoading(true);
+        console.log('PropertyDetail: Fetching property', id);
         const result = await apiService.getProperty(id);
+        console.log('PropertyDetail: API result', result);
         if (result.success && result.data) {
+          console.log('PropertyDetail: Images received', result.data.images);
           setProperty(result.data);
         } else {
           setError(result.error || 'Грешка при зареждане на имота');
@@ -60,7 +63,9 @@ export const PropertyDetail: React.FC = () => {
   }
 
   const images = property.images || [];
+  console.log('PropertyDetail: Final images array', images);
   const currentImage = images[currentImageIndex];
+  console.log('PropertyDetail: Current image', currentImage);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
