@@ -152,11 +152,11 @@ class Property {
         }
 
         if (isset($filters['featured']) && $filters['featured'] === 'true') {
-            $query .= " AND p.featured = 1";
+            $query .= " AND p.featured = TRUE";
         }
 
         if (!isset($filters['active']) || $filters['active'] !== 'all') {
-            $query .= " AND p.active = 1";
+            $query .= " AND p.active = TRUE";
         }
 
         $query .= " ORDER BY p.featured DESC, p.created_at DESC";
@@ -377,7 +377,7 @@ class Property {
         }
 
         if (!isset($filters['active']) || $filters['active'] !== 'all') {
-            $where[] = 'p.active = 1';
+            $where[] = 'p.active = TRUE';
         }
 
         $whereSql = implode(' AND ', $where);

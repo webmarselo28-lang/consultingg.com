@@ -7,7 +7,7 @@ error_reporting(E_ALL);
 error_log("API index.php hit! Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
 
 // Load CORS configuration first
-require_once __DIR__ . '/backend/config/cors.php';
+require_once __DIR__ . '/../backend/config/cors.php';
 
 // Ensure clean output buffer
 if (ob_get_level()) {
@@ -152,32 +152,32 @@ try {
     switch ($route) {
         case 'auth':
             error_log("DEBUG: Loading auth route");
-            require_once __DIR__ . '/backend/routes/auth.php';
+            require_once __DIR__ . '/../backend/routes/auth.php';
             break;
             
         case 'properties':
             error_log("DEBUG: Loading properties route");
-            require_once __DIR__ . '/backend/routes/properties.php';
+            require_once __DIR__ . '/../backend/routes/properties.php';
             break;
             
         case 'images':
             error_log("DEBUG: Loading images route");
-            require_once __DIR__ . '/backend/routes/images.php';
+            require_once __DIR__ . '/../backend/routes/images.php';
             break;
             
         case 'services':
             error_log("DEBUG: Loading services route");
-            require_once __DIR__ . '/backend/routes/services.php';
+            require_once __DIR__ . '/../backend/routes/services.php';
             break;
             
         case 'pages':
             error_log("DEBUG: Loading pages route");
-            require_once __DIR__ . '/backend/routes/pages.php';
+            require_once __DIR__ . '/../backend/routes/pages.php';
             break;
             
         case 'sections':
             error_log("DEBUG: Loading sections route");
-            require_once __DIR__ . '/backend/routes/sections.php';
+            require_once __DIR__ . '/../backend/routes/sections.php';
             break;
             
         default:

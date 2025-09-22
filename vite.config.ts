@@ -5,8 +5,18 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    // Disable proxy in WebContainer environment
-    // API requests will be handled by the static file server
+    host: '0.0.0.0',
+    port: 5000,
+    strictPort: true,
+    hmr: {
+      port: 5000,
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     rollupOptions: {
