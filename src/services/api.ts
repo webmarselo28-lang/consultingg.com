@@ -170,28 +170,10 @@ class ApiService {
       return result;
     } catch (error) {
       console.error('Login API error:', error);
-      
-      // Production fallback for consultingg.com
-      if (email === 'georgiev@consultingg.com' && (password === 'PoloSport88*' || password === 'Polosport8' || password === 'PoloSport88*')) {
-        console.log('Using fallback demo authentication');
-        const token = 'demo-token-' + Date.now();
-        localStorage.setItem('admin_token', token);
-        const userData = {
-          id: 'admin-001',
-          email,
-          name: 'Georgi Georgiev',
-          role: 'admin'
-        };
-        return {
-          success: true,
-          data: { token, user: userData }
-        };
-      } else {
-        return { 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Невалиден имейл или парола' 
-        };
-      }
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Невалиден имейл или парола' 
+      };
     }
   }
 
@@ -880,7 +862,39 @@ class ApiService {
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('admin_token');
+    const token = localStorage.getItem('admin_token');
+    if (!token) return false;
+    
+    // Basic JWT token validation - check if it has 3 parts separated by dots
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.warn('Invalid token format, removing from localStorage');
+      localStorage.removeItem('admin_token');
+      return false;
+    }
+    
+    try {
+      // Basic check if payload is valid JSON (without validating signature/expiry)
+      const payload = JSON.parse(atob(parts[1]));
+      if (!payload.exp || !payload.user_id || !payload.role) {
+        console.warn('Invalid token payload, removing from localStorage');
+        localStorage.removeItem('admin_token');
+        return false;
+      }
+      
+      // Check if token is expired
+      if (payload.exp * 1000 < Date.now()) {
+        console.warn('Token expired, removing from localStorage');
+        localStorage.removeItem('admin_token');
+        return false;
+      }
+      
+      return true;
+    } catch (e) {
+      console.warn('Invalid token, removing from localStorage');
+      localStorage.removeItem('admin_token');
+      return false;
+    }
   }
 
   // Local data management for fallback
