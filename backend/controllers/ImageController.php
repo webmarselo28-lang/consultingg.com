@@ -25,8 +25,9 @@ class ImageController {
 
     public function upload() {
         try {
-            // Set JSON content type header
+            // Set strict JSON content type headers
             header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
             
             require_once __DIR__ . '/../middleware/auth.php';
             // Skip auth for demo mode
@@ -298,8 +299,9 @@ class ImageController {
 
     public function delete($id) {
         try {
-            // Set JSON content type header
+            // Set strict JSON content type header
             header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
             
             require_once __DIR__ . '/../middleware/auth.php';
             // Skip auth for demo mode
@@ -308,6 +310,13 @@ class ImageController {
             }
 
             error_log('[ImageController] Delete image ID: ' . $id);
+
+            // Step 1: Validate image ID format and existence
+            if (empty($id) || !is_string($id)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Invalid image ID format']);
+                exit;
+            }
 
             // Get image info before deleting
             $image = $this->imageModel->getById($id);
@@ -318,29 +327,93 @@ class ImageController {
                 exit;
             }
 
-            // Delete physical files using ImageProcessor
-            require_once __DIR__ . '/../utils/ImageProcessor.php';
-            $mainImagePath = $image['image_path'] ? __DIR__ . '/../..' . $image['image_path'] : null;
-            $thumbnailPath = $image['thumbnail_url'] ? __DIR__ . '/../..' . $image['thumbnail_url'] : null;
-            
-            if ($mainImagePath || $thumbnailPath) {
-                $deleteResult = ImageProcessor::deleteImageFiles($mainImagePath, $thumbnailPath);
-                error_log('[ImageController] File deletion result: ' . json_encode($deleteResult));
+            // Step 2: Validate property ownership (additional security check)
+            $property = $this->propertyModel->getById($image['property_id']);
+            if (!$property) {
+                error_log('[ImageController] Property not found for image: ' . $image['property_id']);
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'Associated property not found']);
+                exit;
             }
 
-            if ($this->imageModel->delete($id)) {
-                error_log('[ImageController] Image deleted successfully');
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Image deleted successfully'
-                ]);
-            } else {
-                error_log('[ImageController] Failed to delete image');
+            // Step 3: Atomic delete operation - database first, then files
+            error_log('[ImageController] Starting atomic delete for image: ' . $id);
+            
+            // First, delete from database
+            if (!$this->imageModel->delete($id)) {
+                error_log('[ImageController] Database deletion failed for image: ' . $id);
                 http_response_code(500);
-                echo json_encode(['success' => false, 'error' => 'Failed to delete image']);
+                echo json_encode(['success' => false, 'error' => 'Failed to delete image record']);
+                exit;
             }
+            
+            // Database deletion successful, now delete physical files
+            require_once __DIR__ . '/../utils/ImageProcessor.php';
+            $deletedFiles = [];
+            $failedFiles = [];
+            
+            // Use consistent path mapping (same as upload uses)
+            $mainImagePath = $image['image_path'] ? $this->uploadsFS . str_replace($this->uploadsPublic, '', $image['image_path']) : null;
+            $thumbnailPath = $image['thumbnail_url'] ? $this->uploadsFS . str_replace($this->uploadsPublic, '', $image['thumbnail_url']) : null;
+            
+            if ($mainImagePath && file_exists($mainImagePath)) {
+                if (unlink($mainImagePath)) {
+                    $deletedFiles[] = $mainImagePath;
+                    error_log('[ImageController] Deleted main image file: ' . $mainImagePath);
+                } else {
+                    $failedFiles[] = $mainImagePath;
+                    error_log('[ImageController] Failed to delete main image file: ' . $mainImagePath);
+                }
+            }
+            
+            if ($thumbnailPath && file_exists($thumbnailPath)) {
+                if (unlink($thumbnailPath)) {
+                    $deletedFiles[] = $thumbnailPath;
+                    error_log('[ImageController] Deleted thumbnail file: ' . $thumbnailPath);
+                } else {
+                    $failedFiles[] = $thumbnailPath;
+                    error_log('[ImageController] Failed to delete thumbnail file: ' . $thumbnailPath);
+                }
+            }
+            
+            // Log any file deletion failures but don't fail the operation
+            // since database record is already deleted
+            if (!empty($failedFiles)) {
+                $errorId = ErrorLogger::logValidationError(
+                    'ImageController::delete - File Cleanup Failed',
+                    'Some files could not be deleted after database record removal',
+                    [
+                        'image_id' => $id,
+                        'deleted_files' => $deletedFiles,
+                        'failed_files' => $failedFiles,
+                        'image_data' => $image
+                    ]
+                );
+                error_log('[ImageController] File cleanup warnings logged [' . $errorId . ']');
+            }
+            
+            error_log('[ImageController] Image deleted successfully - DB record and ' . count($deletedFiles) . ' files');
+            echo json_encode([
+                'success' => true,
+                'message' => 'Image deleted successfully',
+                'data' => [
+                    'deleted_files' => count($deletedFiles),
+                    'failed_files' => count($failedFiles)
+                ]
+            ]);
         } catch (Throwable $e) {
-            error_log('[ImageController] Delete error: ' . $e->getMessage());
+            // Log structured error for delete operation
+            $errorId = ErrorLogger::logError(
+                'ImageController::delete - Server Error',
+                $e,
+                [
+                    'image_id' => $id ?? 'not_set',
+                    'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
+                    'request_method' => $_SERVER['REQUEST_METHOD'] ?? ''
+                ]
+            );
+            
+            error_log('[ImageController] Delete error: ' . $e->getMessage() . ' [' . $errorId . ']');
             http_response_code(500);
             echo json_encode(['success' => false, 'error' => 'Server error during delete']);
         }
