@@ -109,6 +109,28 @@ class PropertyController {
 
             if ($propertyId) {
                 $property = $this->propertyModel->getById($propertyId);
+                
+                // Create upload directory for the property using property_code or fallback to ID
+                if ($property) {
+                    $folderName = !empty($property['property_code']) ? $property['property_code'] : $property['id'];
+                    $uploadDir = __DIR__ . '/../../uploads/properties/' . $folderName . '/';
+                    
+                    if (!is_dir($uploadDir)) {
+                        if (!mkdir($uploadDir, 0755, true)) {
+                            error_log('Failed to create upload directory for property ' . $folderName . ': ' . $uploadDir);
+                        } else {
+                            error_log('Created upload directory for property: ' . $uploadDir);
+                        }
+                    }
+                    
+                    // Verify directory exists after creation attempt
+                    if (is_dir($uploadDir)) {
+                        error_log('Upload directory confirmed for property ' . $folderName . ': ' . $uploadDir);
+                    } else {
+                        error_log('Upload directory verification failed for property ' . $folderName . ': ' . $uploadDir);
+                    }
+                }
+                
                 echo json_encode([
                     'success' => true,
                     'data' => $property
