@@ -867,7 +867,7 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
                   onChange={(e) => handleInputChange('exposure', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Изберете изложение</option>
+                  <option value="">Не е посочено</option>
                   <option value="Север">Север</option>
                   <option value="Юг">Юг</option>
                   <option value="Изток">Изток</option>
