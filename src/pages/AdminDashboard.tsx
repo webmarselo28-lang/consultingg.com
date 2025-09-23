@@ -9,6 +9,10 @@ export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProperties, setTotalProperties] = useState(0);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     // Check authentication
@@ -20,12 +24,17 @@ export const AdminDashboard: React.FC = () => {
     fetchProperties();
   }, [navigate]);
 
-  const fetchProperties = async () => {
+  const fetchProperties = async (page: number = currentPage) => {
     setLoading(true);
     try {
-      const result = await apiService.getProperties({ active: 'all' });
+      const result = await apiService.getProperties({ active: 'all' }, page, itemsPerPage);
       if (result.success && result.data) {
         setProperties(result.data);
+        if (result.meta) {
+          setTotalPages(result.meta.pages || 1);
+          setTotalProperties(result.meta.total || 0);
+          setCurrentPage(result.meta.page || 1);
+        }
       } else {
         setError(result.error || 'Грешка при зареждане на имотите');
       }
@@ -42,11 +51,20 @@ export const AdminDashboard: React.FC = () => {
       if (result.success) {
         setProperties(prev => prev.filter(p => p.id !== id));
         setDeleteId(null);
+        // Refresh the current page to maintain pagination
+        fetchProperties(currentPage);
       } else {
         setError(result.error || 'Грешка при изтриване');
       }
     } catch (error) {
       setError('Грешка при изтриване');
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page);
+      fetchProperties(page);
     }
   };
 
@@ -370,6 +388,73 @@ export const AdminDashboard: React.FC = () => {
                 <Plus className="w-4 h-4" />
                 Добави имот
               </Link>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {properties.length > 0 && totalPages > 1 && (
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Показани <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> до{' '}
+                  <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalProperties)}</span> от{' '}
+                  <span className="font-medium">{totalProperties}</span> имота
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      currentPage === 1
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    Предишна
+                  </button>
+                  
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      let pageNumber;
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i;
+                      } else {
+                        pageNumber = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNumber}
+                          onClick={() => handlePageChange(pageNumber)}
+                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            pageNumber === currentPage
+                              ? 'bg-blue-600 text-white'
+                              : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      currentPage === totalPages
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    Следваща
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
