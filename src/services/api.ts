@@ -559,9 +559,14 @@ class ApiService {
       formData.append('document', file);
       formData.append('property_id', propertyId);
 
+      // Get auth headers but do NOT set Content-Type for FormData
+      const headers = this.getAuthHeaders();
+      // Remove Content-Type if present - let browser set multipart boundary
+      delete headers['Content-Type'];
+
       const response = await fetch(`${API_BASE}/documents/upload`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: headers,
         body: formData
       });
 

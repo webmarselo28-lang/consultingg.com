@@ -143,7 +143,8 @@ try {
                 'services' => '/api/services',
                 'pages' => '/api/pages',
                 'sections' => '/api/sections',
-                'images' => '/api/images'
+                'images' => '/api/images',
+                'documents' => '/api/documents'
             ]
         ]);
         exit;
@@ -180,13 +181,18 @@ try {
             require_once __DIR__ . '/../backend/routes/sections.php';
             break;
             
+        case 'documents':
+            error_log("DEBUG: Loading documents route");
+            require_once __DIR__ . '/../backend/routes/documents.php';
+            break;
+            
         default:
-            error_log("DEBUG: Unknown route: " . $route . " (available: auth, properties, images, services, pages, sections)");
+            error_log("DEBUG: Unknown route: " . $route . " (available: auth, properties, images, services, pages, sections, documents)");
             http_response_code(404);
             echo json_encode([
                 'success' => false,
                 'error' => 'API endpoint not found',
-                'available_endpoints' => ['auth', 'properties', 'images', 'services', 'pages', 'sections'],
+                'available_endpoints' => ['auth', 'properties', 'images', 'services', 'pages', 'sections', 'documents'],
                 'requested_route' => $route,
                 'path_parts' => $pathParts
             ]);

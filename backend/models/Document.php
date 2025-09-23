@@ -11,10 +11,12 @@ class Document {
     }
 
     public function create($data) {
+        // Use RETURNING clause for PostgreSQL to get the generated UUID
         $query = "INSERT INTO " . $this->table_name . " 
                   (property_id, filename, original_filename, file_path, file_size, mime_type) 
                   VALUES 
-                  (:property_id, :filename, :original_filename, :file_path, :file_size, :mime_type)";
+                  (:property_id, :filename, :original_filename, :file_path, :file_size, :mime_type)
+                  RETURNING id";
 
         $stmt = $this->conn->prepare($query);
         
@@ -26,7 +28,8 @@ class Document {
         $stmt->bindParam(':mime_type', $data['mime_type']);
 
         if ($stmt->execute()) {
-            return $this->conn->lastInsertId();
+            $documentId = $stmt->fetchColumn();
+            return $documentId ? $documentId : false;
         }
         return false;
     }
