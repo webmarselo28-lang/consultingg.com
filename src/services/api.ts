@@ -356,20 +356,11 @@ class ApiService {
     } catch (error) {
       console.error('API error in createProperty:', error);
       
-      // Fallback to local data
-      const properties = this.getLocalProperties();
-      const newProperty: Property = {
-        id: 'prop-' + Date.now(),
-        ...data,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        images: []
+      // DO NOT fallback to local data for admin operations - surface the error
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Грешка при създаване на имота'
       };
-      
-      properties.unshift(newProperty);
-      this.saveLocalProperties(properties);
-      
-      return { success: true, data: newProperty };
     }
   }
 

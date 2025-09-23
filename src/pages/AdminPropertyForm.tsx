@@ -40,14 +40,14 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
     title: '',
     description: '',
     property_code: '',
-    price: 0,
+    price: 50000, // Set valid default instead of 0
     currency: 'EUR',
     transaction_type: 'sale',
     property_type: '',
     city_region: 'София',
     district: '',
     address: '',
-    area: 0,
+    area: 50, // Set valid default instead of 0
     bedrooms: 0,
     bathrooms: 0,
     floors: 0,
@@ -362,6 +362,26 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
     setError('');
 
     try {
+      // Client-side validation to match backend requirements
+      if (!formData.title || formData.title.trim().length < 3) {
+        throw new Error('Заглавието трябва да бъде поне 3 символа');
+      }
+      if (!formData.price || formData.price <= 0) {
+        throw new Error('Цената трябва да бъде по-голяма от 0');
+      }
+      if (!formData.area || formData.area <= 0) {
+        throw new Error('Площта трябва да бъде по-голяма от 0');
+      }
+      if (!formData.property_type) {
+        throw new Error('Моля изберете тип имот');
+      }
+      if (!formData.transaction_type) {
+        throw new Error('Моля изберете тип сделка');
+      }
+      if (!formData.city_region) {
+        throw new Error('Моля изберете град/регион');
+      }
+
       let propertyCode: string;
       let propertyId: string;
       
