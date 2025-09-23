@@ -346,15 +346,29 @@ class ApiService {
 
   async createProperty(data: PropertyFormData): Promise<ApiResponse<Property>> {
     try {
+      console.log('=== CREATING PROPERTY DEBUG ===');
+      console.log('API_BASE:', API_BASE);
+      console.log('Request URL:', `${API_BASE}/properties`);
+      console.log('Auth Headers:', this.getAuthHeaders());
+      console.log('Form Data:', data);
+      console.log('JSON Body:', JSON.stringify(data));
+      
       const response = await fetch(`${API_BASE}/properties`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
       });
 
-      return await handleResponse(response);
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      const result = await handleResponse(response);
+      console.log('API Result:', result);
+      
+      return result;
     } catch (error) {
       console.error('API error in createProperty:', error);
+      console.log('FALLING BACK TO LOCAL STORAGE DUE TO ERROR:', error);
       
       // Fallback to local data
       const properties = this.getLocalProperties();
