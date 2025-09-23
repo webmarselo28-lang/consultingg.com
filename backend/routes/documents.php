@@ -4,14 +4,19 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 $documentModel = new Document();
 
-// Get request path
-$path = $_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '';
-$path = preg_replace('/\/api\/documents/', '', $path);
-$path = trim($path, '/');
+// Get normalized path consistent with index.php
+$path = $_SERVER['CONSULTINGG_API_PATH'] ?? parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$path = preg_replace('#^/(backend/)?api/?#', '/', $path);
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Parse path components
-$pathParts = array_filter(explode('/', $path));
+$pathParts = explode('/', trim($path, '/'));
+
+// Strip leading 'documents' only if present
+if (isset($pathParts[0]) && $pathParts[0] === 'documents') {
+    array_shift($pathParts);
+}
+
 $action = $pathParts[0] ?? '';
 
 try {
