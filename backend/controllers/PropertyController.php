@@ -83,7 +83,15 @@ class PropertyController {
         try {
             AuthMiddleware::requireAdmin();
 
-            $data = json_decode(file_get_contents("php://input"), true);
+            // Debug JSON parsing
+            $rawInput = file_get_contents("php://input");
+            error_log('[PropertyController@create] Raw input: ' . $rawInput);
+            error_log('[PropertyController@create] Raw input length: ' . strlen($rawInput));
+            error_log('[PropertyController@create] Content-Type: ' . ($_SERVER['CONTENT_TYPE'] ?? 'NOT SET'));
+            
+            $data = json_decode($rawInput, true);
+            error_log('[PropertyController@create] Decoded data: ' . print_r($data, true));
+            error_log('[PropertyController@create] JSON decode error: ' . json_last_error_msg());
 
             // Validate input data
             $validationResult = $this->validatePropertyData($data);
