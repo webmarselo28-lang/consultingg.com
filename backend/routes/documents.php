@@ -76,6 +76,19 @@ function handleDocumentUpload() {
 
     $file = $_FILES['document'];
     $propertyId = $_POST['property_id'];
+    
+    // Get property to retrieve property_code
+    require_once __DIR__ . '/../models/Property.php';
+    $propertyModel = new Property();
+    $property = $propertyModel->getById($propertyId);
+    
+    if (!$property) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'Property not found']);
+        return;
+    }
+    
+    $propertyCode = $property['property_code'] ?? $propertyId; // Fallback to ID if no code
 
     // Validate file
     if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -103,8 +116,8 @@ function handleDocumentUpload() {
         return;
     }
 
-    // Create upload directory
-    $uploadDir = __DIR__ . '/../../uploads/properties/' . $propertyId . '/';
+    // Create upload directory using property_code
+    $uploadDir = __DIR__ . '/../../uploads/properties/' . $propertyCode . '/';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
     }

@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, MapPin, Bed, Bath, Square, Calendar } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, MapPin, Bed, Bath, Square, Calendar, FileText } from 'lucide-react';
 import { Property } from '../types/property';
 import { apiService } from '../services/api';
 
@@ -844,6 +844,25 @@ export const PropertyDetail: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* PDF Documents */}
+              {property.documents && property.documents.length > 0 && (
+                <div className="mt-6">
+                  <button
+                    onClick={() => {
+                      // Open first PDF document in new tab
+                      if (property.documents && property.documents.length > 0) {
+                        window.open(`/api/documents/${property.documents[0].id}`, '_blank');
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 w-full bg-red-600 text-white py-3 px-4 rounded-xl hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                    title="Отвори PDF документи"
+                  >
+                    <FileText className="w-5 h-5" />
+                    <span className="font-medium">Виж документи ({property.documents.length})</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
