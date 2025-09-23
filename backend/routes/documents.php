@@ -33,8 +33,11 @@ try {
 
         case 'GET':
             if ($action === 'serve' && isset($pathParts[1])) {
-                // Serve document file
+                // Serve document file via /api/documents/serve/{id}
                 serveDocument($pathParts[1]);
+            } elseif ($action && ctype_alnum(str_replace('-', '', $action))) {
+                // Serve document file via /api/documents/{id}
+                serveDocument($action);
             } else {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'Invalid action']);
