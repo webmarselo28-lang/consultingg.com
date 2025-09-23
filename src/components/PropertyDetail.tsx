@@ -211,7 +211,7 @@ export const PropertyDetail: React.FC = () => {
                   <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                     <Bed className="w-6 h-6 text-blue-600" />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900">{property.bedrooms}</div>
+                  <div className="text-2xl font-bold text-gray-900">{property.bedrooms || 0}</div>
                   <div className="text-sm text-gray-600">спални</div>
                 </div>
 
@@ -652,15 +652,15 @@ export const PropertyDetail: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Спални:</span>
-                      <span className="font-medium text-gray-900">{property.bedrooms}</span>
+                      <span className="font-medium text-gray-900">{property.bedrooms || 0}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Бани:</span>
-                      <span className="font-medium text-gray-900">{property.bathrooms}</span>
+                      <span className="font-medium text-gray-900">{property.bathrooms || 0}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Тераси:</span>
-                      <span className="font-medium text-gray-900">{property.terraces}</span>
+                      <span className="font-medium text-gray-900">{property.terraces || 0}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Етаж:</span>
