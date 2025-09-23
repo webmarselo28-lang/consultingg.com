@@ -30,6 +30,7 @@ export interface Property {
   created_at: string;
   updated_at: string;
   images?: PropertyImage[];
+  documents?: PropertyDocument[];
 }
 
 interface PropertyImage {
@@ -44,6 +45,13 @@ interface PropertyImage {
   file_size?: number;
   mime_type?: string;
   created_at: string;
+}
+
+interface PropertyDocument {
+  id: string;
+  filename: string;
+  size: number;
+  url: string;
 }
 
 export interface PropertyFormData {
