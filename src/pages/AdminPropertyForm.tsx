@@ -152,6 +152,116 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Document upload handlers
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    if (files.length === 0) return;
+    
+    // Process files and upload immediately if editing existing property
+    files.forEach((file) => {
+      // Validate file type (PDF only)
+      if (file.type !== 'application/pdf') {
+        setError(`Неподдържан формат на файл: ${file.type}. Моля използвайте само PDF файлове.`);
+        return;
+      }
+      
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setError(`Файлът е твърде голям: ${(file.size / 1024 / 1024).toFixed(1)}MB. Максимум 10MB.`);
+        return;
+      }
+      
+      const newDocument = {
+        filename: file.name,
+        size: file.size,
+        file,
+        uploading: false
+      };
+      
+      setDocuments(prev => [...prev, newDocument]);
+      
+      // If editing existing property, upload immediately
+      if (isEdit && id) {
+        uploadDocumentImmediately(file, id);
+      }
+    });
+    
+    // Clear the input so the same file can be selected again
+    e.target.value = '';
+    // Clear any previous errors
+    setError('');
+  };
+
+  const uploadDocumentImmediately = async (file: File, propertyId: string) => {
+    try {
+      // Set uploading state for this document
+      setDocuments(prev => prev.map((doc) => 
+        doc.file === file ? { ...doc, uploading: true, error: undefined } : doc
+      ));
+      
+      const result = await apiService.uploadDocument(propertyId, file);
+      
+      if (result.success) {
+        // Update document with server response
+        setDocuments(prev => prev.map((doc) => 
+          doc.file === file ? {
+            id: result.data.id,
+            filename: result.data.filename,
+            size: result.data.size,
+            url: result.data.url,
+            uploading: false
+          } : doc
+        ));
+      } else {
+        // Set error state for this document
+        setDocuments(prev => prev.map((doc) => 
+          doc.file === file ? { ...doc, uploading: false, error: result.error } : doc
+        ));
+        setError(result.error || 'Грешка при качване на документа');
+      }
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      setDocuments(prev => prev.map((doc) => 
+        doc.file === file ? { ...doc, uploading: false, error: 'Грешка при качване' } : doc
+      ));
+      setError('Грешка при качване на документа');
+    }
+  };
+
+  const removeDocument = async (index: number) => {
+    const document = documents[index];
+    
+    // If document has an ID, delete from server
+    if (document.id && isEdit && id) {
+      try {
+        const result = await apiService.deleteDocument(document.id);
+        if (result.success) {
+          // Remove from local state immediately
+          setDocuments(prev => prev.filter((_, i) => i !== index));
+        } else {
+          setError(result.error || 'Грешка при изтриване на документа');
+          return;
+        }
+      } catch (error) {
+        console.error('Error deleting document:', error);
+        setError('Грешка при изтриване на документа');
+        return;
+      }
+    } else {
+      // Remove from local state only (for new uploads not yet saved)
+      setDocuments(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     
@@ -983,6 +1093,82 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
                       <div className="absolute bottom-1 left-1 right-1 bg-red-500 text-white text-xs px-2 py-1 rounded">
                         Грешка
                       </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Documents (PDFs) */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Документи (PDF)</h2>
+            
+            <div className="mb-6">
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <Upload className="w-8 h-8 mb-4 text-gray-500" />
+                  <p className="mb-2 text-sm text-gray-500">
+                    <span className="font-semibold">Кликнете за качване</span> или плъзнете PDF файлове
+                  </p>
+                  <p className="text-xs text-gray-500">Само PDF файлове (MAX. 10MB)</p>
+                </div>
+                <input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  accept=".pdf"
+                  onChange={handleDocumentUpload}
+                />
+              </label>
+            </div>
+
+            {documents.length > 0 && (
+              <div className="space-y-3">
+                {documents.map((document, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{document.filename}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(document.size)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {document.url && (
+                        <button
+                          type="button"
+                          onClick={() => window.open(document.url, '_blank')}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Отвори PDF"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeDocument(index)}
+                        disabled={document.uploading}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="Премахни документ"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {document.uploading && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      </div>
+                    )}
+                    {document.error && (
+                      <div className="mt-1 text-xs text-red-600">{document.error}</div>
                     )}
                   </div>
                 ))}

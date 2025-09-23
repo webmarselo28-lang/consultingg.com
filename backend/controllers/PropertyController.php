@@ -278,9 +278,8 @@ class PropertyController {
 
         // Validate year_built specifically
         if (isset($data['year_built'])) {
-            $currentYear = date('Y');
-            if ($data['year_built'] < 1800 || $data['year_built'] > $currentYear + 5) {
-                return ['valid' => false, 'error' => 'Year built must be between 1800 and ' . ($currentYear + 5)];
+            if ($data['year_built'] < 1800 || $data['year_built'] > 2040) {
+                return ['valid' => false, 'error' => 'Year built must be between 1800 and 2040'];
             }
         }
 
