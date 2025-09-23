@@ -11,69 +11,83 @@ class Property {
     }
 
     public function create($data) {
-        $query = "INSERT INTO " . $this->table_name . " 
-                  (id, title, description, price, currency, transaction_type, property_type, 
-                   city_region, district, address, area, bedrooms, bathrooms, floors, 
-                   floor_number, terraces, construction_type, condition_type, heating, 
-                   year_built, furnishing_level, has_elevator, has_garage, 
-                   has_southern_exposure, new_construction, featured, active) 
-                  VALUES 
-                  (:id, :title, :description, :price, :currency, :transaction_type, :property_type,
-                   :city_region, :district, :address, :area, :bedrooms, :bathrooms, :floors,
-                   :floor_number, :terraces, :construction_type, :condition_type, :heating,
-                   :year_built, :furnishing_level, :has_elevator, :has_garage,
-                   :has_southern_exposure, :new_construction, :featured, :active)";
+        // Begin transaction
+        $this->conn->beginTransaction();
+        
+        try {
+            $query = "INSERT INTO " . $this->table_name . " 
+                      (id, title, description, price, currency, transaction_type, property_type, 
+                       city_region, district, address, area, bedrooms, bathrooms, floors, 
+                       floor_number, terraces, construction_type, condition_type, heating, 
+                       year_built, furnishing_level, has_elevator, has_garage, 
+                       has_southern_exposure, new_construction, featured, active, property_code) 
+                      VALUES 
+                      (:id, :title, :description, :price, :currency, :transaction_type, :property_type,
+                       :city_region, :district, :address, :area, :bedrooms, :bathrooms, :floors,
+                       :floor_number, :terraces, :construction_type, :condition_type, :heating,
+                       :year_built, :furnishing_level, :has_elevator, :has_garage,
+                       :has_southern_exposure, :new_construction, :featured, :active, :property_code)";
 
-        $stmt = $this->conn->prepare($query);
+            $stmt = $this->conn->prepare($query);
+            
+            // Generate UUID
+            $data['id'] = $this->generateUUID();
         
-        // Generate UUID
-        $data['id'] = $this->generateUUID();
-        
-        // Set defaults for missing fields
-        $data['description'] = $data['description'] ?? '';
-        $data['district'] = $data['district'] ?? '';
-        $data['address'] = $data['address'] ?? '';
-        $data['floors'] = $data['floors'] ?? null;
-        $data['floor_number'] = $data['floor_number'] ?? null;
-        $data['construction_type'] = $data['construction_type'] ?? '';
-        $data['condition_type'] = $data['condition'] ?? '';
-        $data['heating'] = $data['heating'] ?? '';
-        $data['year_built'] = $data['year_built'] ?? null;
-        $data['furnishing_level'] = $data['furnishing_level'] ?? '';
-        
-        // Bind parameters
-        $stmt->bindParam(':id', $data['id']);
-        $stmt->bindParam(':title', $data['title']);
-        $stmt->bindParam(':description', $data['description']);
-        $stmt->bindParam(':price', $data['price']);
-        $stmt->bindParam(':currency', $data['currency']);
-        $stmt->bindParam(':transaction_type', $data['transaction_type']);
-        $stmt->bindParam(':property_type', $data['property_type']);
-        $stmt->bindParam(':city_region', $data['city_region']);
-        $stmt->bindParam(':district', $data['district']);
-        $stmt->bindParam(':address', $data['address']);
-        $stmt->bindParam(':area', $data['area']);
-        $stmt->bindParam(':bedrooms', $data['bedrooms']);
-        $stmt->bindParam(':bathrooms', $data['bathrooms']);
-        $stmt->bindParam(':floors', $data['floors']);
-        $stmt->bindParam(':floor_number', $data['floor_number']);
-        $stmt->bindParam(':terraces', $data['terraces']);
-        $stmt->bindParam(':construction_type', $data['construction_type']);
-        $stmt->bindParam(':condition_type', $data['condition_type']);
-        $stmt->bindParam(':heating', $data['heating']);
-        $stmt->bindParam(':year_built', $data['year_built']);
-        $stmt->bindParam(':furnishing_level', $data['furnishing_level']);
-        $stmt->bindParam(':has_elevator', $data['has_elevator'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':has_garage', $data['has_garage'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':has_southern_exposure', $data['has_southern_exposure'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':new_construction', $data['new_construction'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':featured', $data['featured'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':active', $data['active'], PDO::PARAM_BOOL);
+            // Set defaults for missing fields
+            $data['description'] = $data['description'] ?? '';
+            $data['district'] = $data['district'] ?? '';
+            $data['address'] = $data['address'] ?? '';
+            $data['floors'] = $data['floors'] ?? null;
+            $data['floor_number'] = $data['floor_number'] ?? null;
+            $data['construction_type'] = $data['construction_type'] ?? '';
+            $data['condition_type'] = $data['condition_type'] ?? '';
+            $data['heating'] = $data['heating'] ?? '';
+            $data['year_built'] = $data['year_built'] ?? null;
+            $data['furnishing_level'] = $data['furnishing_level'] ?? '';
+            $data['property_code'] = $data['property_code'] ?? null;
+            
+            // Bind parameters
+            $stmt->bindParam(':id', $data['id']);
+            $stmt->bindParam(':title', $data['title']);
+            $stmt->bindParam(':description', $data['description']);
+            $stmt->bindParam(':price', $data['price']);
+            $stmt->bindParam(':currency', $data['currency']);
+            $stmt->bindParam(':transaction_type', $data['transaction_type']);
+            $stmt->bindParam(':property_type', $data['property_type']);
+            $stmt->bindParam(':city_region', $data['city_region']);
+            $stmt->bindParam(':district', $data['district']);
+            $stmt->bindParam(':address', $data['address']);
+            $stmt->bindParam(':area', $data['area']);
+            $stmt->bindParam(':bedrooms', $data['bedrooms']);
+            $stmt->bindParam(':bathrooms', $data['bathrooms']);
+            $stmt->bindParam(':floors', $data['floors']);
+            $stmt->bindParam(':floor_number', $data['floor_number']);
+            $stmt->bindParam(':terraces', $data['terraces']);
+            $stmt->bindParam(':construction_type', $data['construction_type']);
+            $stmt->bindParam(':condition_type', $data['condition_type']);
+            $stmt->bindParam(':heating', $data['heating']);
+            $stmt->bindParam(':year_built', $data['year_built']);
+            $stmt->bindParam(':furnishing_level', $data['furnishing_level']);
+            $stmt->bindParam(':has_elevator', $data['has_elevator'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':has_garage', $data['has_garage'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':has_southern_exposure', $data['has_southern_exposure'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':new_construction', $data['new_construction'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':featured', $data['featured'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':active', $data['active'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':property_code', $data['property_code']);
 
-        if ($stmt->execute()) {
-            return $data['id']; // Return UUID
+            if ($stmt->execute()) {
+                $this->conn->commit();
+                return $data['id']; // Return UUID
+            } else {
+                $this->conn->rollback();
+                return false;
+            }
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log('[Property@create] Transaction failed: ' . $e->getMessage());
+            return false;
         }
-        return false;
     }
 
     public function getAll($filters = []) {
@@ -242,64 +256,81 @@ class Property {
     }
 
     public function update($id, $data) {
-        // Set defaults for missing fields
-        $data['description'] = $data['description'] ?? '';
-        $data['district'] = $data['district'] ?? '';
-        $data['address'] = $data['address'] ?? '';
-        $data['floors'] = $data['floors'] ?? null;
-        $data['floor_number'] = $data['floor_number'] ?? null;
-        $data['construction_type'] = $data['construction_type'] ?? '';
-        $data['condition_type'] = $data['condition'] ?? '';
-        $data['heating'] = $data['heating'] ?? '';
-        $data['year_built'] = $data['year_built'] ?? null;
-        $data['furnishing_level'] = $data['furnishing_level'] ?? '';
+        // Begin transaction
+        $this->conn->beginTransaction();
         
-        $query = "UPDATE " . $this->table_name . " SET 
-                  title = :title, description = :description, price = :price, 
-                  currency = :currency, transaction_type = :transaction_type, 
-                  property_type = :property_type, city_region = :city_region, 
-                  district = :district, address = :address, area = :area, 
-                  bedrooms = :bedrooms, bathrooms = :bathrooms, floors = :floors, 
-                  floor_number = :floor_number, terraces = :terraces, 
-                  construction_type = :construction_type, condition_type = :condition_type, 
-                  heating = :heating, year_built = :year_built,
-                  furnishing_level = :furnishing_level, has_elevator = :has_elevator, 
-                  has_garage = :has_garage, has_southern_exposure = :has_southern_exposure, 
-                  new_construction = :new_construction, featured = :featured, 
-                  active = :active, updated_at = CURRENT_TIMESTAMP 
-                  WHERE id = :id";
+        try {
+            // Set defaults for missing fields
+            $data['description'] = $data['description'] ?? '';
+            $data['district'] = $data['district'] ?? '';
+            $data['address'] = $data['address'] ?? '';
+            $data['floors'] = $data['floors'] ?? null;
+            $data['floor_number'] = $data['floor_number'] ?? null;
+            $data['construction_type'] = $data['construction_type'] ?? '';
+            $data['condition_type'] = $data['condition_type'] ?? '';
+            $data['heating'] = $data['heating'] ?? '';
+            $data['year_built'] = $data['year_built'] ?? null;
+            $data['furnishing_level'] = $data['furnishing_level'] ?? '';
+            $data['property_code'] = $data['property_code'] ?? null;
+            
+            $query = "UPDATE " . $this->table_name . " SET 
+                      title = :title, description = :description, price = :price, 
+                      currency = :currency, transaction_type = :transaction_type, 
+                      property_type = :property_type, city_region = :city_region, 
+                      district = :district, address = :address, area = :area, 
+                      bedrooms = :bedrooms, bathrooms = :bathrooms, floors = :floors, 
+                      floor_number = :floor_number, terraces = :terraces, 
+                      construction_type = :construction_type, condition_type = :condition_type, 
+                      heating = :heating, year_built = :year_built,
+                      furnishing_level = :furnishing_level, has_elevator = :has_elevator, 
+                      has_garage = :has_garage, has_southern_exposure = :has_southern_exposure, 
+                      new_construction = :new_construction, featured = :featured, 
+                      active = :active, property_code = :property_code, updated_at = CURRENT_TIMESTAMP 
+                      WHERE id = :id";
 
-        $stmt = $this->conn->prepare($query);
-        
-        $stmt->bindParam(':id', $id);
-        $stmt->bindParam(':title', $data['title']);
-        $stmt->bindParam(':description', $data['description']);
-        $stmt->bindParam(':price', $data['price']);
-        $stmt->bindParam(':currency', $data['currency']);
-        $stmt->bindParam(':transaction_type', $data['transaction_type']);
-        $stmt->bindParam(':property_type', $data['property_type']);
-        $stmt->bindParam(':city_region', $data['city_region']);
-        $stmt->bindParam(':district', $data['district']);
-        $stmt->bindParam(':address', $data['address']);
-        $stmt->bindParam(':area', $data['area']);
-        $stmt->bindParam(':bedrooms', $data['bedrooms']);
-        $stmt->bindParam(':bathrooms', $data['bathrooms']);
-        $stmt->bindParam(':floors', $data['floors']);
-        $stmt->bindParam(':floor_number', $data['floor_number']);
-        $stmt->bindParam(':terraces', $data['terraces']);
-        $stmt->bindParam(':construction_type', $data['construction_type']);
-        $stmt->bindParam(':condition_type', $data['condition_type']);
-        $stmt->bindParam(':heating', $data['heating']);
-        $stmt->bindParam(':year_built', $data['year_built']);
-        $stmt->bindParam(':furnishing_level', $data['furnishing_level']);
-        $stmt->bindParam(':has_elevator', $data['has_elevator'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':has_garage', $data['has_garage'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':has_southern_exposure', $data['has_southern_exposure'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':new_construction', $data['new_construction'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':featured', $data['featured'], PDO::PARAM_BOOL);
-        $stmt->bindParam(':active', $data['active'], PDO::PARAM_BOOL);
+            $stmt = $this->conn->prepare($query);
+            
+            $stmt->bindParam(':id', $id);
+            $stmt->bindParam(':title', $data['title']);
+            $stmt->bindParam(':description', $data['description']);
+            $stmt->bindParam(':price', $data['price']);
+            $stmt->bindParam(':currency', $data['currency']);
+            $stmt->bindParam(':transaction_type', $data['transaction_type']);
+            $stmt->bindParam(':property_type', $data['property_type']);
+            $stmt->bindParam(':city_region', $data['city_region']);
+            $stmt->bindParam(':district', $data['district']);
+            $stmt->bindParam(':address', $data['address']);
+            $stmt->bindParam(':area', $data['area']);
+            $stmt->bindParam(':bedrooms', $data['bedrooms']);
+            $stmt->bindParam(':bathrooms', $data['bathrooms']);
+            $stmt->bindParam(':floors', $data['floors']);
+            $stmt->bindParam(':floor_number', $data['floor_number']);
+            $stmt->bindParam(':terraces', $data['terraces']);
+            $stmt->bindParam(':construction_type', $data['construction_type']);
+            $stmt->bindParam(':condition_type', $data['condition_type']);
+            $stmt->bindParam(':heating', $data['heating']);
+            $stmt->bindParam(':year_built', $data['year_built']);
+            $stmt->bindParam(':furnishing_level', $data['furnishing_level']);
+            $stmt->bindParam(':has_elevator', $data['has_elevator'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':has_garage', $data['has_garage'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':has_southern_exposure', $data['has_southern_exposure'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':new_construction', $data['new_construction'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':featured', $data['featured'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':active', $data['active'], PDO::PARAM_BOOL);
+            $stmt->bindParam(':property_code', $data['property_code']);
 
-        return $stmt->execute();
+            if ($stmt->execute()) {
+                $this->conn->commit();
+                return true;
+            } else {
+                $this->conn->rollback();
+                return false;
+            }
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log('[Property@update] Transaction failed: ' . $e->getMessage());
+            return false;
+        }
     }
 
     public function delete($id) {
