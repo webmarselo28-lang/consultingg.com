@@ -23,23 +23,17 @@ export const AdminLogin: React.FC = () => {
     setLoading(true);
     setError('');
 
-    console.log('Attempting login with:', { email, password: '***' });
-    console.log('API BASE:', import.meta.env.VITE_API_BASE);
-    console.log('Full API URL:', `${import.meta.env.VITE_API_BASE || '/api'}/auth/login`);
+    // Console logs removed for production security
     
     try {
       const result = await apiService.login(email, password);
-      console.log('Login result:', result);
 
       if (result.success) {
-        console.log('Login successful, redirecting to admin...');
         navigate('/admin');
       } else {
-        console.error('Login failed:', result.error);
         setError(result.error || 'Невалиден имейл или парола');
       }
     } catch (error) {
-      console.error('Login error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Грешка при свързване със сървъра';
       setError(errorMessage);
     } finally {
@@ -60,7 +54,7 @@ export const AdminLogin: React.FC = () => {
           <p className="text-gray-600">Влезте в административния панел</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Имейл
@@ -70,7 +64,13 @@ export const AdminLogin: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="georgiev@consultingg.com"
+              placeholder="Въведете имейл адрес"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="email"
+              data-testid="input-email"
               required
             />
           </div>
@@ -86,6 +86,8 @@ export const AdminLogin: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-12"
                 placeholder="••••••••"
+                autoComplete="new-password"
+                data-testid="input-password"
                 required
               />
               <button
