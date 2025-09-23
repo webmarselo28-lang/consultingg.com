@@ -697,8 +697,7 @@ export const PropertyDetail: React.FC = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Изложение:</span>
                       <span className="font-medium text-gray-900">
-                        {property.id === 'prop-007' ? 'Юг / Изток / Запад' :
-                         property.exposure || 'Ю-И-З'}
+                        {property.exposure || 'Не е посочено'}
                       </span>
                     </div>
                     <div className="flex justify-between">
