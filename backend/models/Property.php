@@ -33,18 +33,22 @@ class Property {
             // Generate UUID
             $data['id'] = $this->generateUUID();
         
-            // Set defaults for missing fields
-            $data['description'] = $data['description'] ?? '';
-            $data['district'] = $data['district'] ?? '';
-            $data['address'] = $data['address'] ?? '';
-            $data['floors'] = $data['floors'] ?? null;
-            $data['floor_number'] = $data['floor_number'] ?? null;
-            $data['construction_type'] = $data['construction_type'] ?? '';
-            $data['condition_type'] = $data['condition_type'] ?? '';
-            $data['heating'] = $data['heating'] ?? '';
-            $data['year_built'] = $data['year_built'] ?? null;
-            $data['furnishing_level'] = $data['furnishing_level'] ?? '';
-            $data['property_code'] = $data['property_code'] ?? null;
+            // Handle optional fields - use NULL for missing/empty values in detail fields
+            $data['description'] = !empty($data['description']) ? $data['description'] : null;
+            $data['district'] = !empty($data['district']) ? $data['district'] : null;
+            $data['address'] = !empty($data['address']) ? $data['address'] : null;
+            $data['floors'] = isset($data['floors']) && $data['floors'] > 0 ? $data['floors'] : null;
+            $data['floor_number'] = isset($data['floor_number']) && $data['floor_number'] > 0 ? $data['floor_number'] : null;
+            $data['construction_type'] = !empty($data['construction_type']) ? $data['construction_type'] : null;
+            $data['condition_type'] = !empty($data['condition_type']) ? $data['condition_type'] : null;
+            $data['heating'] = !empty($data['heating']) ? $data['heating'] : null;
+            $data['year_built'] = isset($data['year_built']) && $data['year_built'] > 0 ? $data['year_built'] : null;
+            $data['furnishing_level'] = !empty($data['furnishing_level']) ? $data['furnishing_level'] : null;
+            $data['property_code'] = !empty($data['property_code']) ? $data['property_code'] : null;
+            $data['bedrooms'] = isset($data['bedrooms']) && $data['bedrooms'] > 0 ? $data['bedrooms'] : null;
+            $data['bathrooms'] = isset($data['bathrooms']) && $data['bathrooms'] > 0 ? $data['bathrooms'] : null;
+            $data['terraces'] = isset($data['terraces']) && $data['terraces'] > 0 ? $data['terraces'] : null;
+            $data['exposure'] = !empty($data['exposure']) ? $data['exposure'] : null;
             
             // Bind parameters
             $stmt->bindParam(':id', $data['id']);
@@ -250,6 +254,19 @@ class Property {
             // Process images with ImageHelper
             require_once __DIR__ . '/../utils/ImageHelper.php';
             $property['images'] = ImageHelper::processImages($property['images']);
+            
+            // Add documents
+            require_once __DIR__ . '/Document.php';
+            $documentModel = new Document();
+            $documents = $documentModel->getByPropertyId($property['id']);
+            $property['documents'] = array_map(function($doc) {
+                return [
+                    'id' => $doc['id'],
+                    'filename' => $doc['original_filename'],
+                    'size' => $doc['file_size'],
+                    'url' => '/api/documents/serve/' . $doc['id']
+                ];
+            }, $documents);
         }
 
         return $property;
@@ -260,18 +277,22 @@ class Property {
         $this->conn->beginTransaction();
         
         try {
-            // Set defaults for missing fields
-            $data['description'] = $data['description'] ?? '';
-            $data['district'] = $data['district'] ?? '';
-            $data['address'] = $data['address'] ?? '';
-            $data['floors'] = $data['floors'] ?? null;
-            $data['floor_number'] = $data['floor_number'] ?? null;
-            $data['construction_type'] = $data['construction_type'] ?? '';
-            $data['condition_type'] = $data['condition_type'] ?? '';
-            $data['heating'] = $data['heating'] ?? '';
-            $data['year_built'] = $data['year_built'] ?? null;
-            $data['furnishing_level'] = $data['furnishing_level'] ?? '';
-            $data['property_code'] = $data['property_code'] ?? null;
+            // Handle optional fields - use NULL for missing/empty values in detail fields
+            $data['description'] = !empty($data['description']) ? $data['description'] : null;
+            $data['district'] = !empty($data['district']) ? $data['district'] : null;
+            $data['address'] = !empty($data['address']) ? $data['address'] : null;
+            $data['floors'] = isset($data['floors']) && $data['floors'] > 0 ? $data['floors'] : null;
+            $data['floor_number'] = isset($data['floor_number']) && $data['floor_number'] > 0 ? $data['floor_number'] : null;
+            $data['construction_type'] = !empty($data['construction_type']) ? $data['construction_type'] : null;
+            $data['condition_type'] = !empty($data['condition_type']) ? $data['condition_type'] : null;
+            $data['heating'] = !empty($data['heating']) ? $data['heating'] : null;
+            $data['year_built'] = isset($data['year_built']) && $data['year_built'] > 0 ? $data['year_built'] : null;
+            $data['furnishing_level'] = !empty($data['furnishing_level']) ? $data['furnishing_level'] : null;
+            $data['property_code'] = !empty($data['property_code']) ? $data['property_code'] : null;
+            $data['bedrooms'] = isset($data['bedrooms']) && $data['bedrooms'] > 0 ? $data['bedrooms'] : null;
+            $data['bathrooms'] = isset($data['bathrooms']) && $data['bathrooms'] > 0 ? $data['bathrooms'] : null;
+            $data['terraces'] = isset($data['terraces']) && $data['terraces'] > 0 ? $data['terraces'] : null;
+            $data['exposure'] = !empty($data['exposure']) ? $data['exposure'] : null;
             
             $query = "UPDATE " . $this->table_name . " SET 
                       title = :title, description = :description, price = :price, 

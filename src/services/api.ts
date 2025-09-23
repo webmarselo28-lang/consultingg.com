@@ -553,6 +553,28 @@ class ApiService {
     }
   }
 
+  async uploadDocument(propertyId: string, file: File): Promise<ApiResponse<any>> {
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('property_id', propertyId);
+
+      const response = await fetch(`${API_BASE}/documents/upload`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: formData
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('API error in uploadDocument:', error);
+      return {
+        success: false,
+        error: 'Грешка при качване на документа'
+      };
+    }
+  }
+
   // Pages
   async getPages(): Promise<ApiResponse<any[]>> {
     const DEV = import.meta.env.DEV;

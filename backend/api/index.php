@@ -144,6 +144,10 @@ try {
             require_once __DIR__ . '/../routes/images.php';
             break;
             
+        case 'documents':
+            require_once __DIR__ . '/../routes/documents.php';
+            break;
+            
         case 'services':
             require_once __DIR__ . '/../routes/services.php';
             break;
@@ -161,7 +165,7 @@ try {
             echo json_encode([
                 'success' => false,
                 'error' => 'API endpoint not found',
-                'available_endpoints' => ['auth', 'properties', 'images', 'services', 'pages', 'sections']
+                'available_endpoints' => ['auth', 'properties', 'images', 'documents', 'services', 'pages', 'sections']
             ]);
             exit;
     }

@@ -26,6 +26,16 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
     error?: string;
   }>>([]);
 
+  const [documents, setDocuments] = useState<Array<{
+    id?: string;
+    filename: string;
+    size: number;
+    url?: string;
+    file?: File;
+    uploading?: boolean;
+    error?: string;
+  }>>([]);
+
   const [formData, setFormData] = useState<PropertyFormData>({
     title: '',
     description: '',
@@ -116,6 +126,16 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
             isMain: img.is_main,
             sortOrder: img.sort_order,
             altText: img.alt_text
+          })));
+        }
+        
+        // Set documents
+        if (property.documents) {
+          setDocuments(property.documents.map((doc: any) => ({
+            id: doc.id,
+            filename: doc.filename,
+            size: doc.size,
+            url: doc.url
           })));
         }
       } else {
@@ -310,6 +330,32 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
     }
   };
 
+  // Helper function to filter out empty optional fields
+  const filterOptionalFields = (data: PropertyFormData) => {
+    const cleanData = { ...data };
+    
+    // Remove empty string fields (convert to undefined so they don't get sent)
+    if (!cleanData.description?.trim()) delete cleanData.description;
+    if (!cleanData.property_code?.trim()) delete cleanData.property_code;
+    if (!cleanData.district?.trim()) delete cleanData.district;
+    if (!cleanData.address?.trim()) delete cleanData.address;
+    if (!cleanData.construction_type?.trim()) delete cleanData.construction_type;
+    if (!cleanData.condition_type?.trim()) delete cleanData.condition_type;
+    if (!cleanData.heating?.trim()) delete cleanData.heating;
+    if (!cleanData.exposure?.trim()) delete cleanData.exposure;
+    if (!cleanData.furnishing_level?.trim()) delete cleanData.furnishing_level;
+    
+    // Remove zero/empty numeric fields
+    if (!cleanData.bedrooms || cleanData.bedrooms <= 0) delete cleanData.bedrooms;
+    if (!cleanData.bathrooms || cleanData.bathrooms <= 0) delete cleanData.bathrooms;
+    if (!cleanData.terraces || cleanData.terraces <= 0) delete cleanData.terraces;
+    if (!cleanData.floors || cleanData.floors <= 0) delete cleanData.floors;
+    if (!cleanData.floor_number || cleanData.floor_number <= 0) delete cleanData.floor_number;
+    if (!cleanData.year_built || cleanData.year_built <= 0) delete cleanData.year_built;
+    
+    return cleanData;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -319,16 +365,19 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
       let propertyCode: string;
       let propertyId: string;
       
+      // Filter out empty optional fields before submission
+      const cleanFormData = filterOptionalFields(formData);
+      
       if (isEdit && id) {
         // Update existing property
-        const result = await apiService.updateProperty(id, formData);
+        const result = await apiService.updateProperty(id, cleanFormData);
         if (!result.success) {
           throw new Error(result.error || 'Failed to update property');
         }
         propertyId = id;
       } else {
         // Create new property
-        const result = await apiService.createProperty(formData);
+        const result = await apiService.createProperty(cleanFormData);
         if (!result.success || !result.data) {
           throw new Error(result.error || 'Failed to create property');
         }
