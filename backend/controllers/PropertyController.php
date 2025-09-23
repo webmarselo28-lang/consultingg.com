@@ -268,8 +268,8 @@ class PropertyController {
             }
         }
 
-        // Validate numeric fields
-        $numericFields = ['bedrooms', 'bathrooms', 'floors', 'floor_number', 'terraces', 'year_built'];
+        // Validate numeric fields (excluding year_built which has separate validation)
+        $numericFields = ['bedrooms', 'bathrooms', 'floors', 'floor_number', 'terraces'];
         foreach ($numericFields as $field) {
             if (isset($data[$field]) && (!is_numeric($data[$field]) || $data[$field] < 0 || $data[$field] > 1000)) {
                 return ['valid' => false, 'error' => "Field '$field' must be a non-negative number less than 1000"];

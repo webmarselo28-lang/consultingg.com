@@ -571,6 +571,23 @@ class ApiService {
     }
   }
 
+  async deleteDocument(documentId: string): Promise<ApiResponse<void>> {
+    try {
+      const response = await fetch(`${API_BASE}/documents/${documentId}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders()
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('API error in deleteDocument:', error);
+      return {
+        success: false,
+        error: 'Грешка при изтриване на документа'
+      };
+    }
+  }
+
   // Pages
   async getPages(): Promise<ApiResponse<any[]>> {
     const DEV = import.meta.env.DEV;
