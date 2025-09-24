@@ -72,7 +72,7 @@ export const PropertyDetail: React.FC = () => {
       {/* SEO Meta Tags */}
       <Helmet>
         <title>{property.title} - ConsultingG Real Estate</title>
-        <meta name="description" content={property.description || `${property.title} - ${property.city_region}, ${property.area}м², €${property.price.toLocaleString()}`} />
+        <meta name="description" content={property.description || `${property.title} - ${property.city_region}, ${property.area}м², €${Math.floor(property.price).toLocaleString()}`} />
         <link rel="canonical" href={`https://consultingg.com/properties/${property.id}`} />
       </Helmet>
 
@@ -184,12 +184,12 @@ export const PropertyDetail: React.FC = () => {
               <div className="text-4xl font-bold text-blue-600 mb-8">
                 {property.pricing_mode === 'per_sqm' ? (
                   <>
-                    €{property.price.toLocaleString()}
+                    €{Math.floor(property.price).toLocaleString()}
                     <span className="text-lg text-gray-600 font-normal">/м²</span>
                   </>
                 ) : (
                   <>
-                    €{property.price.toLocaleString()}
+                    €{Math.floor(property.price).toLocaleString()}
                     {property.transaction_type === 'rent' && (
                       <span className="text-lg text-gray-600 font-normal">/месец</span>
                     )}

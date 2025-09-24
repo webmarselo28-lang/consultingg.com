@@ -283,7 +283,7 @@ export const AdminDashboard: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        €{property.price.toLocaleString()}
+                        €{Math.floor(property.price).toLocaleString()}
                       </div>
                       <div className={`text-sm font-medium flex items-center gap-1 ${
                         property.transaction_type === 'rent' 

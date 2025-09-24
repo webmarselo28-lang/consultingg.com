@@ -252,7 +252,7 @@ export const PropertiesPage: React.FC = () => {
 
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-2xl font-bold text-blue-600">
-                      €{property.price?.toLocaleString() || '0'}
+                      €{Math.floor(property.price || 0).toLocaleString()}
                       {property.transaction_type === 'rent' && (
                         <span className="text-sm text-sky-600 font-medium">/месец</span>
                       )}

@@ -101,7 +101,7 @@ export const SupabaseTest: React.FC = () => {
                       <p className="text-sm text-gray-600">{property.city_region}</p>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-blue-600">€{property.price?.toLocaleString()}</div>
+                      <div className="font-bold text-blue-600">€{Math.floor(property.price || 0).toLocaleString()}</div>
                       <div className="text-xs text-gray-500">{property.id}</div>
                     </div>
                   </div>
