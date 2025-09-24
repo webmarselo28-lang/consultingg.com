@@ -1,0 +1,47 @@
+# PHP API Configuration - MAXIMUM SECURITY
+# Block ALL direct access except index.php routing
+
+RewriteEngine On
+
+# CRITICAL SECURITY: Deny direct access to ALL files except index.php
+<Files "*">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Allow ONLY index.php to be executed
+<Files "index.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Block access to sensitive directories
+<DirectoryMatch "(config|controllers|models|routes|utils|middleware|vendor|database|scripts|sql)">
+    Order Deny,Allow
+    Deny from all
+</DirectoryMatch>
+
+# Block sensitive file types
+<FilesMatch "\.(sql|php|json|lock|md|txt|log)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Allow index.php exception for the above rule
+<Files "index.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Prevent directory listing
+Options -Indexes
+
+# Route ALL requests through index.php (no exceptions for existing files)
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Set environment to production
+SetEnv APP_ENV production
+
+# Security headers
+Header always set X-Robots-Tag "noindex, nofollow"
+Header always set X-Content-Type-Options "nosniff"
