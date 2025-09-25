@@ -28,15 +28,8 @@ if (file_exists(__DIR__ . '/../.env')) {
         }
     }
 } else {
-    // Fallback environment variables for production  
-    $_ENV['DB_HOST'] = 'localhost';
-    $_ENV['DB_NAME'] = 'yogahonc_consultingg55';
-    $_ENV['DB_USER'] = 'yogahonc_consultingg55';
-    $_ENV['DB_PASS'] = 'PoloSport88*';
-    $_ENV['JWT_SECRET'] = 'consultingg-production-jwt-secret-key-2024';
-    $_ENV['JWT_AUD'] = 'consultingg.com';
-    $_ENV['APP_ENV'] = 'production';
-    $_ENV['APP_DEBUG'] = 'true';
+    // No hardcoded fallbacks - environment file required for production
+    error_log("[CONFIG] Warning: No .env file found in backend directory. Environment variables must be configured.");
 }
 
 // Set WebContainer environment flag for demo mode
