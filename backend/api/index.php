@@ -19,8 +19,8 @@ ini_set('log_errors', 1);
 error_reporting(E_ALL);
 
 // Load environment variables
-if (file_exists(__DIR__ . '/../.env')) {
-    $lines = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+if (file_exists(__DIR__ . '/.env')) {
+    $lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
         if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
             list($key, $value) = explode('=', $line, 2);
@@ -29,7 +29,7 @@ if (file_exists(__DIR__ . '/../.env')) {
     }
 } else {
     // No hardcoded fallbacks - environment file required for production
-    error_log("[CONFIG] Warning: No .env file found in backend directory. Environment variables must be configured.");
+    error_log("[CONFIG] Warning: No .env file found in backend/api directory. Environment variables must be configured.");
 }
 
 // Set WebContainer environment flag for demo mode

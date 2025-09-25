@@ -1,4 +1,4 @@
-AddHandler ${application/x-httpd-yogahonc-php83} .php .php5 .phtml .php7 .php8
+# PHP version set via cPanel PHP Selector
 
 # Security: Block access to sensitive files
 <Files "*.env*">

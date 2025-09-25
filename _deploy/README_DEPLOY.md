@@ -95,8 +95,9 @@ psql -h localhost -U yogahonc_consultingg88 -d yogahonc_consultingg8 < dump_YYYY
 
 1. **Copy Environment File**:
    ```bash
-   # In cPanel File Manager, copy .env.production.example 
-   # to public_html/backend/api/.env
+   # In cPanel File Manager, navigate to public_html/backend/api/
+   # Copy .env.production.example to .env in the same directory
+   # Location: public_html/backend/api/.env
    ```
 
 2. **Edit `.env` with Real Values**:

@@ -85,4 +85,4 @@ deploy*/
 DEPLOY*.md
 DEPLOYMENT*.md
 MIGRATION*.md
-DIAGNOSTIC*.md
+DIAGNOSTIC*.mdbackend/.env
