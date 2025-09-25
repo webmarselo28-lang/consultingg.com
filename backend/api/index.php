@@ -18,18 +18,19 @@ ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 error_reporting(E_ALL);
 
-// Load environment variables
-if (file_exists(__DIR__ . '/.env')) {
-    $lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+// Load environment variables from project root
+$envFile = __DIR__ . '/../../.env.development';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
         if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
             list($key, $value) = explode('=', $line, 2);
             $_ENV[trim($key)] = trim($value);
         }
     }
+    error_log("[CONFIG] Loaded environment variables from: $envFile");
 } else {
-    // No hardcoded fallbacks - environment file required for production
-    error_log("[CONFIG] Warning: No .env file found in backend/api directory. Environment variables must be configured.");
+    error_log("[CONFIG] Warning: No .env.development file found in project root. Using Replit environment variables.");
 }
 
 // Set WebContainer environment flag for demo mode
