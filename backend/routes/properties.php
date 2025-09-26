@@ -45,7 +45,7 @@ try {
                     // PUT /properties/{id}/images/{imageId}/main
                     require_once __DIR__ . '/../controllers/ImageController.php';
                     $imageController = new ImageController();
-                    $imageController->setMain();
+                    $imageController->setMainFromUrl($pathParts[0], $pathParts[2]);
                 } else {
                     // PUT /properties/{id}/images/{imageId} - Update image details
                     require_once __DIR__ . '/../controllers/ImageController.php';
@@ -55,6 +55,23 @@ try {
             } else {
                 // Regular property update
                 $propertyController->update($pathParts[0]);
+            }
+        } else {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Property ID is required']);
+        }
+        break;
+        
+    case 'PATCH':
+        if (!empty($pathParts[0])) {
+            if (isset($pathParts[1]) && $pathParts[1] === 'images' && isset($pathParts[2]) && isset($pathParts[3]) && $pathParts[3] === 'main') {
+                // PATCH /properties/{id}/images/{imageId}/main
+                require_once __DIR__ . '/../controllers/ImageController.php';
+                $imageController = new ImageController();
+                $imageController->setMainFromUrl($pathParts[0], $pathParts[2]);
+            } else {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Invalid PATCH endpoint']);
             }
         } else {
             http_response_code(400);

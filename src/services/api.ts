@@ -492,10 +492,9 @@ class ApiService {
 
   async setMainImage(imageId: string, propertyId: string): Promise<ApiResponse<void>> {
     try {
-      const response = await fetch(`${API_BASE}/images/set-main`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ property_id: propertyId, image_id: imageId })
+      const response = await fetch(`${API_BASE}/properties/${propertyId}/images/${imageId}/main`, {
+        method: 'PATCH',
+        headers: this.getAuthHeaders()
       });
 
       return await handleResponse(response);

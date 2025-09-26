@@ -479,6 +479,68 @@ class ImageController {
         exit;
     }
 
+    public function setMainFromUrl($propertyId, $imageId) {
+        try {
+            // Set strict JSON content type header
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            
+            require_once __DIR__ . '/../middleware/auth.php';
+            // Skip auth for demo mode
+            if (!isset($_ENV['WEBCONTAINER_ENV']) && !isset($_ENV['DEMO_MODE'])) {
+                AuthMiddleware::requireAdmin();
+            }
+
+            error_log('[ImageController] Set main image from URL params - Property: ' . $propertyId . ', Image: ' . $imageId);
+
+            // Validate parameters
+            if (empty($propertyId) || empty($imageId)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Property ID and Image ID are required']);
+                exit;
+            }
+
+            // Validate that the image exists and belongs to the property
+            $image = $this->imageModel->getById($imageId);
+            if (!$image) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'Image not found']);
+                exit;
+            }
+
+            if ($image['property_id'] !== $propertyId) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Image does not belong to the specified property']);
+                exit;
+            }
+
+            // Set the main image atomically
+            if ($this->imageModel->setMainImage($propertyId, $imageId)) {
+                error_log('[ImageController] Main image set successfully via URL');
+                
+                // Get updated property images to return
+                $updatedImages = $this->imageModel->getByPropertyId($propertyId);
+                
+                echo json_encode([
+                    'success' => true,
+                    'imageId' => $imageId,
+                    'is_main' => true,
+                    'message' => 'Main image updated successfully',
+                    'images' => $updatedImages
+                ]);
+            } else {
+                error_log('[ImageController] Failed to set main image via URL');
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Failed to update main image']);
+            }
+        } catch (Throwable $e) {
+            error_log('[ImageController] Set main from URL error: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Server error during set main']);
+        }
+        exit;
+    }
+
     public function update($id) {
         try {
             require_once __DIR__ . '/../middleware/auth.php';
