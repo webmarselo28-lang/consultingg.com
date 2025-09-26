@@ -1,0 +1,61 @@
+Diagnose and fix the white-screen on property page after recent image-handling changes. If the fix risks broader regressions, revert to the last known working state and document which change caused the break. Do not change business logic or DB schema. Use project root (not _deploy).
+
+1) Reproduce & capture evidence
+
+Run the app and open any property detail page (from homepage/listings).
+
+Collect:
+
+Browser console errors/warnings.
+
+Network tab for the failing navigation (status codes, MIME types, response bodies).
+
+PHP error logs (display + file logs), including fatal errors / exceptions / stack traces.
+
+Build/runtime logs for frontend (React) and backend (PHP).
+
+2) Quick technical triage (check these first)
+
+Frontend routing/rendering: React runtime errors, infinite loops, Suspense boundaries, missing keys/hooks, useEffect exceptions, bad import paths, tree-shaken files missing in build.
+
+Asset pipeline: wrong paths for newly added images/derivatives, <picture>/srcset syntax errors, preload tags pointing to invalid URLs, MIME type = text/html for JS bundles (Strict MIME issue).
+
+API/JSON: property fetch returning 200 with invalid JSON (HTML error page), 404s from API, or CORS issues.
+
+PHP backend: fatal errors in ImageProcessor, missing GD/Imagick functions, undefined index/var, file permissions on derivative folders, unexpected exceptions in new endpoints.
+
+Routing on server: .htaccess/rewrites for SPA routes; ensure property route serves the app bundle instead of a 404 HTML.
+
+.env/config: wrong path or missing VITE_API_BASE, toggles forcing a code path that crashes.
+
+3) Containment plan
+
+If the root cause is in the new image derivatives/preload/picture work, feature-flag or temporarily disable only the failing part while keeping the rest.
+
+If the smallest safe fix isn’t trivial, rollback to the last green state (create a branch with current changes, then revert). Preserve changes in a separate branch for later.
+
+4) Minimal safe fix (if possible)
+
+Frontend: guard against undefined/null data, remove crashing preload/picture/srcset only if they cause the error, keep hero/cards/thumbs working with original images as fallback.
+
+Backend: wrap new image-processing in try/catch; if derivative missing/fails, serve original image; no upscaling and no schema changes.
+
+5) Verification checklist
+
+Property page renders with no blank screen; console is clean (no uncaught errors).
+
+Network calls return correct JSON (no text/html where JSON is expected).
+
+Images display (hero/cards/thumb); if derivatives fail, originals are used.
+
+No regressions on listing page, uploads, admin, star/main-image toggle.
+
+6) Deliverables
+
+Root cause summary (1–2 sentences), exact files/lines changed.
+
+If rolled back: the commit hash of the last working state and branch name keeping new work.
+
+If fixed: diff of the minimal changes and why they’re safe.
+
+Short “how to test” steps for me.
