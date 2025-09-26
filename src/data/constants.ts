@@ -50,7 +50,7 @@ const CITY_DISTRICTS = {
     'Малинова долина', 'Манастирски ливади', 'Милево', 'Младост 1', 'Младост 1А', 'Младост 2',
     'Младост 3', 'Младост 4', 'Модерно предградие', 'Мусагеница', 'Надежда 1', 'Надежда 2',
     'Надежда 3', 'Надежда 4', 'НПЗ Изток', 'НПЗ Искър', 'НПЗ Хаджи Димитър', 'Обеля',
-    'Обеля 1', 'Обеля 2', 'Овча купел 1', 'Овча купел 2', 'Орландовци', 'Павлово',
+    'Обеля 1', 'Обеля 2', 'Оборище', 'Овча купел 1', 'Овча купел 2', 'Орландовци', 'Павлово',
     'Панчарево', 'Подуяне', 'Полигона', 'Разсадника', 'Редута', 'Света Троица',
     'Свобода', 'Сердика', 'Симеоново', 'Славия', 'Слатина', 'Стрелбище',
     'Студентски град', 'Сухата река', 'Суходол', 'Толстой', 'Триъгълника', 'Филиповци',
@@ -253,6 +253,42 @@ export const getAllCities = () => {
     cities.forEach(city => allCities.add(city));
   });
   return Array.from(allCities).sort().map((city, index) => ({ key: `${city}-${index}`, value: city }));
+};
+
+// District aliases and synonyms for search parsing
+export const DISTRICT_ALIASES = {
+  'Оборище': ['Оборище', 'кв. Оборище', 'гр. София, кв. Оборище', 'Sofia Oborishte', 'Oborishte'],
+  'Център': ['Център', 'центъра', 'център София', 'Sofia Center', 'Center'],
+  'Лозенец': ['Лозенец', 'кв. Лозенец', 'Lozenets'],
+  'Младост 1': ['Младост 1', 'Mladost 1', 'кв. Младост 1'],
+  'Симеоново': ['Симеоново', 'Simeonovo', 'кв. Симеоново'],
+  'Витоша': ['Витоша', 'Vitosha', 'кв. Витоша'],
+  'Бояна': ['Бояна', 'Boyana', 'кв. Бояна']
+};
+
+// Normalize location input for search
+export const normalizeLocationInput = (input: string): string => {
+  if (!input) return '';
+  
+  const trimmed = input.trim();
+  
+  // Find exact alias match
+  for (const [canonical, aliases] of Object.entries(DISTRICT_ALIASES)) {
+    if (aliases.some(alias => 
+      alias.toLowerCase() === trimmed.toLowerCase() ||
+      alias.toLowerCase().includes(trimmed.toLowerCase()) ||
+      trimmed.toLowerCase().includes(alias.toLowerCase())
+    )) {
+      return canonical;
+    }
+  }
+  
+  return trimmed;
+};
+
+// Get all possible aliases for a district
+export const getDistrictAliases = (district: string): string[] => {
+  return DISTRICT_ALIASES[district] || [district];
 };
 
 // Helper function to get districts for a city
