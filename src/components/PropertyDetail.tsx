@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Phone, Mail, MapPin, Bed, Bath, Square, Calendar, FileText } from 'lucide-react';
 import { Property } from '../types/property';
 import { apiService } from '../services/api';
+import { ScrollableGallery } from './ScrollableGallery';
 
 export const PropertyDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -144,33 +145,12 @@ export const PropertyDetail: React.FC = () => {
                 </div>
 
                 {/* Image Thumbnails */}
-                {images.length > 1 && (
-                  <div className="p-4 bg-gray-50">
-                    <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-                      {images.map((image, index) => (
-                        <button
-                          key={image.id}
-                          onClick={() => setCurrentImageIndex(index)}
-                          className={`relative flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                            index === currentImageIndex 
-                              ? 'border-blue-500 scale-105' 
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <img
-                            src={image.url || image.image_url}
-                            alt={image.alt_text || `Снимка ${index + 1}`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = '/images/placeholder.jpg';
-                            }}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <ScrollableGallery
+                  images={images}
+                  currentImageIndex={currentImageIndex}
+                  onImageSelect={setCurrentImageIndex}
+                  propertyTitle={property.title}
+                />
               </div>
             </div>
 
