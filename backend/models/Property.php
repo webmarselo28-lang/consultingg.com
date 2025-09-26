@@ -281,68 +281,89 @@ class Property {
         $this->conn->beginTransaction();
         
         try {
-            // Handle optional fields - use NULL for missing/empty values in detail fields
-            $data['description'] = !empty($data['description']) ? $data['description'] : null;
-            $data['district'] = !empty($data['district']) ? $data['district'] : null;
-            $data['address'] = !empty($data['address']) ? $data['address'] : null;
-            $data['floors'] = isset($data['floors']) && $data['floors'] > 0 ? $data['floors'] : null;
-            $data['floor_number'] = isset($data['floor_number']) && $data['floor_number'] > 0 ? $data['floor_number'] : null;
-            $data['construction_type'] = !empty($data['construction_type']) ? $data['construction_type'] : null;
-            $data['condition_type'] = !empty($data['condition_type']) ? $data['condition_type'] : null;
-            $data['heating'] = !empty($data['heating']) ? $data['heating'] : null;
-            $data['year_built'] = isset($data['year_built']) && $data['year_built'] > 0 ? $data['year_built'] : null;
-            $data['furnishing_level'] = !empty($data['furnishing_level']) ? $data['furnishing_level'] : null;
-            $data['property_code'] = !empty($data['property_code']) ? $data['property_code'] : null;
-            $data['bedrooms'] = isset($data['bedrooms']) && $data['bedrooms'] > 0 ? $data['bedrooms'] : null;
-            $data['bathrooms'] = isset($data['bathrooms']) && $data['bathrooms'] > 0 ? $data['bathrooms'] : null;
-            $data['terraces'] = isset($data['terraces']) && $data['terraces'] > 0 ? $data['terraces'] : null;
-            $data['exposure'] = !empty($data['exposure']) ? $data['exposure'] : null;
+            // Build dynamic query based on provided fields only
+            $fields = [];
+            $params = [':id' => $id];
             
-            $query = "UPDATE " . $this->table_name . " SET 
-                      title = :title, description = :description, price = :price, 
-                      currency = :currency, transaction_type = :transaction_type, 
-                      property_type = :property_type, city_region = :city_region, 
-                      district = :district, address = :address, area = :area, 
-                      bedrooms = :bedrooms, bathrooms = :bathrooms, floors = :floors, 
-                      floor_number = :floor_number, terraces = :terraces, 
-                      construction_type = :construction_type, condition_type = :condition_type, 
-                      heating = :heating, year_built = :year_built,
-                      furnishing_level = :furnishing_level, has_elevator = :has_elevator, 
-                      has_garage = :has_garage, has_southern_exposure = :has_southern_exposure, 
-                      new_construction = :new_construction, featured = :featured, 
-                      active = :active, property_code = :property_code, updated_at = CURRENT_TIMESTAMP 
-                      WHERE id = :id";
-
+            // Define field mappings and their types
+            $fieldMappings = [
+                'title' => 'string',
+                'description' => 'string',
+                'price' => 'float',
+                'currency' => 'string',
+                'transaction_type' => 'string',
+                'property_type' => 'string',
+                'city_region' => 'string',
+                'district' => 'string',
+                'address' => 'string',
+                'area' => 'float',
+                'bedrooms' => 'int',
+                'bathrooms' => 'int',
+                'floors' => 'int',
+                'floor_number' => 'int',
+                'terraces' => 'int',
+                'construction_type' => 'string',
+                'condition_type' => 'string',
+                'heating' => 'string',
+                'year_built' => 'int',
+                'furnishing_level' => 'string',
+                'has_elevator' => 'bool',
+                'has_garage' => 'bool',
+                'has_southern_exposure' => 'bool',
+                'new_construction' => 'bool',
+                'featured' => 'bool',
+                'active' => 'bool',
+                'property_code' => 'string',
+                'exposure' => 'string'
+            ];
+            
+            foreach ($fieldMappings as $field => $type) {
+                if (array_key_exists($field, $data)) {
+                    $fields[] = "$field = :$field";
+                    
+                    // Handle optional fields with null values
+                    $value = $data[$field];
+                    if ($type === 'string' && empty($value)) {
+                        $value = null;
+                    } elseif (in_array($type, ['int', 'float']) && (!isset($value) || $value <= 0)) {
+                        $value = null;
+                    }
+                    
+                    $params[":$field"] = $value;
+                }
+            }
+            
+            // Always update timestamp
+            $fields[] = "updated_at = CURRENT_TIMESTAMP";
+            
+            if (empty($fields)) {
+                $this->conn->rollback();
+                return false;
+            }
+            
+            $query = "UPDATE " . $this->table_name . " SET " . implode(', ', $fields) . " WHERE id = :id";
             $stmt = $this->conn->prepare($query);
             
-            $stmt->bindParam(':id', $id);
-            $stmt->bindParam(':title', $data['title']);
-            $stmt->bindParam(':description', $data['description']);
-            $stmt->bindParam(':price', $data['price']);
-            $stmt->bindParam(':currency', $data['currency']);
-            $stmt->bindParam(':transaction_type', $data['transaction_type']);
-            $stmt->bindParam(':property_type', $data['property_type']);
-            $stmt->bindParam(':city_region', $data['city_region']);
-            $stmt->bindParam(':district', $data['district']);
-            $stmt->bindParam(':address', $data['address']);
-            $stmt->bindParam(':area', $data['area']);
-            $stmt->bindParam(':bedrooms', $data['bedrooms']);
-            $stmt->bindParam(':bathrooms', $data['bathrooms']);
-            $stmt->bindParam(':floors', $data['floors']);
-            $stmt->bindParam(':floor_number', $data['floor_number']);
-            $stmt->bindParam(':terraces', $data['terraces']);
-            $stmt->bindParam(':construction_type', $data['construction_type']);
-            $stmt->bindParam(':condition_type', $data['condition_type']);
-            $stmt->bindParam(':heating', $data['heating']);
-            $stmt->bindParam(':year_built', $data['year_built']);
-            $stmt->bindParam(':furnishing_level', $data['furnishing_level']);
-            $stmt->bindParam(':has_elevator', $data['has_elevator'], PDO::PARAM_BOOL);
-            $stmt->bindParam(':has_garage', $data['has_garage'], PDO::PARAM_BOOL);
-            $stmt->bindParam(':has_southern_exposure', $data['has_southern_exposure'], PDO::PARAM_BOOL);
-            $stmt->bindParam(':new_construction', $data['new_construction'], PDO::PARAM_BOOL);
-            $stmt->bindParam(':featured', $data['featured'], PDO::PARAM_BOOL);
-            $stmt->bindParam(':active', $data['active'], PDO::PARAM_BOOL);
-            $stmt->bindParam(':property_code', $data['property_code']);
+            // Bind parameters with proper types
+            foreach ($params as $key => $value) {
+                if ($key === ':id') {
+                    $stmt->bindValue($key, $value);
+                } else {
+                    $fieldName = str_replace(':', '', $key);
+                    if (isset($fieldMappings[$fieldName])) {
+                        $type = $fieldMappings[$fieldName];
+                        if ($type === 'bool') {
+                            $stmt->bindValue($key, $value, PDO::PARAM_BOOL);
+                        } elseif ($type === 'int') {
+                            $stmt->bindValue($key, $value, PDO::PARAM_INT);
+                        } else {
+                            $stmt->bindValue($key, $value);
+                        }
+                    } else {
+                        $stmt->bindValue($key, $value);
+                    }
+                }
+            }
 
             if ($stmt->execute()) {
                 $this->conn->commit();
