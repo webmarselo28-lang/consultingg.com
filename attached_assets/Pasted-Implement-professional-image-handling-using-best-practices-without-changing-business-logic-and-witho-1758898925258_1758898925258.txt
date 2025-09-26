@@ -1,0 +1,61 @@
+Implement professional image handling using best practices without changing business logic and without degrading image quality.
+
+Goals
+
+Keep originals; generate responsive, cropped derivatives for current UI ratios:
+
+hero_16x9: 1920×1080 and 1280×720 (center-crop, no upscaling beyond original)
+
+card_16x9: 640×360 (center-crop, no upscaling)
+
+thumb_5x4: 160×128 (center-crop)
+
+Preserve original filenames; add suffixes for derivatives (e.g., name.hero_1920x1080.jpg).
+
+Serve modern formats with fallback: AVIF → WebP → JPEG (visually lossless quality; configurable; do not recompress if a smaller derivative of equal/better quality already exists).
+
+Backend (PHP)
+
+Extend existing ImageProcessor to create/cache the above derivatives on upload (or first request).
+
+Respect EXIF orientation, convert to sRGB, strip metadata.
+
+Never upscale beyond source; if source < target, downscale target proportionally or fall back to source.
+
+Provide a lightweight CLI/endpoint to backfill derivatives for existing images (no schema changes).
+
+Frontend (React)
+
+Property detail (hero): use hero_16x9 with <picture> and srcset/sizes; do not lazy-load hero; add <link rel="preload" as="image"> for LCP image.
+
+Listings/cards: use card_16x9 with srcset/sizes; keep current h-48 and object-cover.
+
+Gallery thumbnails: use thumb_5x4.
+
+All non-LCP images: loading="lazy" and decoding="async".
+
+Set explicit width/height or aspect-ratio to prevent CLS; keep existing styling.
+
+Quality & performance constraints
+
+“Visually lossless” presets (e.g., AVIF ~50–60, WebP ~75–85) but do not worsen perceived quality; make quality configurable and avoid double-compression.
+
+No logic/route/model changes; no DB updates.
+
+No third-party heavy libs unless already used.
+
+Caching/CDN
+
+Add long-cache headers for derivatives; include cache-busting via filename suffix. (Do not change hosting/provider config beyond static headers if already supported.)
+
+Acceptance
+
+Hero is crisp and loads fast (preloaded, no lazy); cards and thumbs sharp; no upscaling artifacts; CLS stable.
+
+Original kept; derivatives generated only as needed; old images still work via fallback.
+
+No regressions in uploads, galleries, or admin.
+
+Deliverables
+
+List of changed files (backend processor, React components), new derivative presets, and a short test checklist (hero/card/thumb, srcset, preload, lazy).
