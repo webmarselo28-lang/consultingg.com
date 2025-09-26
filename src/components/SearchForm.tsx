@@ -4,7 +4,7 @@ import { SearchDropdown } from './SearchDropdown';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
 import { AdvancedSearch } from './AdvancedSearch';
 import { useSearchForm } from '../hooks/useSearchForm';
-import { REGIONS_AND_CITIES, PROPERTY_TYPES, getAllCities, getDistrictsForCity } from '../data/constants';
+import { REGIONS_AND_CITIES, PROPERTY_TYPES, getAllCities, getDistrictsForCity, normalizeLocationInput } from '../data/constants';
 
 interface SearchFormProps {
   onSearch?: (filters: any) => void;
@@ -51,7 +51,8 @@ export const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
     }
     
     if (formData.selectedDistricts.length > 0) {
-      searchParams.district = formData.selectedDistricts[0]; // Take first selected
+      // Normalize the district before sending to API
+      searchParams.district = normalizeLocationInput(formData.selectedDistricts[0]); // Take first selected
     }
     
     if (formData.priceMin) {
@@ -163,9 +164,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
   };
 
   const handleDistrictChange = (district: string) => {
-    const updatedDistricts = formData.selectedDistricts.includes(district)
-      ? formData.selectedDistricts.filter(d => d !== district)
-      : [...formData.selectedDistricts, district];
+    // Normalize the district input to handle aliases
+    const normalizedDistrict = normalizeLocationInput(district);
+    const updatedDistricts = formData.selectedDistricts.includes(normalizedDistrict)
+      ? formData.selectedDistricts.filter(d => d !== normalizedDistrict)
+      : [...formData.selectedDistricts, normalizedDistrict];
     updateFormData({ selectedDistricts: updatedDistricts });
   };
 
