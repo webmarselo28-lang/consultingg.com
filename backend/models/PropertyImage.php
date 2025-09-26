@@ -90,27 +90,75 @@ class PropertyImage {
             return false;
         }
 
-        // Delete physical files
-        require_once __DIR__ . '/../utils/ImageProcessor.php';
-        $mainImagePath = $image['image_path'] ? __DIR__ . '/../..' . $image['image_path'] : null;
-        $thumbnailPath = $image['thumbnail_url'] ? __DIR__ . '/../..' . $image['thumbnail_url'] : null;
-        
-        if ($mainImagePath || $thumbnailPath) {
-            $deleteResult = ImageProcessor::deleteImageFiles($mainImagePath, $thumbnailPath);
-            error_log('[PropertyImage] File deletion result: ' . json_encode($deleteResult));
-        }
+        $propertyId = $image['property_id'];
+        $wasMainImage = (bool)$image['is_main'];
 
-        error_log('[PropertyImage] Deleting image ID: ' . $id);
+        // Start transaction for atomic operation
+        $database = Database::getInstance();
+        $conn = $database->getConnection();
         
-        // Delete from database
-        $query = "DELETE FROM " . $this->table_name . " WHERE id = :id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $id);
-        
-        $result = $stmt->execute();
-        error_log('[PropertyImage] Database delete result: ' . ($result ? 'SUCCESS' : 'FAILED'));
-        
-        return $result;
+        try {
+            $conn->beginTransaction();
+
+            // Delete from database first
+            $query = "DELETE FROM " . $this->table_name . " WHERE id = :id";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':id', $id);
+            
+            if (!$stmt->execute()) {
+                $conn->rollback();
+                error_log('[PropertyImage] Database delete failed for ID: ' . $id);
+                return false;
+            }
+            
+            // If we deleted the main image, set another image as main
+            if ($wasMainImage) {
+                error_log('[PropertyImage] Deleted image was main, finding replacement...');
+                
+                // Get the first remaining image (ordered by sort_order, then by id)
+                $query = "SELECT id FROM " . $this->table_name . " 
+                          WHERE property_id = :property_id 
+                          ORDER BY sort_order ASC, id ASC 
+                          LIMIT 1";
+                $stmt = $conn->prepare($query);
+                $stmt->bindParam(':property_id', $propertyId);
+                $stmt->execute();
+                $nextImage = $stmt->fetch();
+                
+                if ($nextImage) {
+                    // Set the first remaining image as main
+                    $query = "UPDATE " . $this->table_name . " SET is_main = :true WHERE id = :id";
+                    $stmt = $conn->prepare($query);
+                    $stmt->bindValue(':true', true, PDO::PARAM_BOOL);
+                    $stmt->bindParam(':id', $nextImage['id']);
+                    $stmt->execute();
+                    
+                    error_log('[PropertyImage] Set new main image: ' . $nextImage['id']);
+                } else {
+                    error_log('[PropertyImage] No remaining images to set as main for property: ' . $propertyId);
+                }
+            }
+            
+            $conn->commit();
+            error_log('[PropertyImage] Database delete successful for ID: ' . $id);
+            
+            // Delete physical files after successful database operation
+            require_once __DIR__ . '/../utils/ImageProcessor.php';
+            $mainImagePath = $image['image_path'] ? __DIR__ . '/../..' . $image['image_path'] : null;
+            $thumbnailPath = $image['thumbnail_url'] ? __DIR__ . '/../..' . $image['thumbnail_url'] : null;
+            
+            if ($mainImagePath || $thumbnailPath) {
+                $deleteResult = ImageProcessor::deleteImageFiles($mainImagePath, $thumbnailPath);
+                error_log('[PropertyImage] File deletion result: ' . json_encode($deleteResult));
+            }
+            
+            return true;
+            
+        } catch (Throwable $e) {
+            $conn->rollback();
+            error_log('[PropertyImage] Delete transaction failed: ' . $e->getMessage());
+            return false;
+        }
     }
 
     public function deleteByPropertyId($property_id) {
@@ -159,7 +207,7 @@ class PropertyImage {
             $stmt->execute();
 
             // Then set the specified image as main
-            $query = "UPDATE " . $this->table_name . " SET is_main = :true WHERE id = :id";
+            $query = "UPDATE " . $this->table_name . " SET is_main = :true WHERE id = :id AND property_id = :property_id";
             $stmt = $conn->prepare($query);
             $stmt->bindValue(':true', true, PDO::PARAM_BOOL);
             $stmt->bindParam(':id', $image_id);
