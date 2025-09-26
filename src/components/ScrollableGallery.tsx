@@ -3,8 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Image {
   id: string;
-  url?: string;
-  image_url?: string;
+  image_url: string;
   alt_text?: string;
 }
 
@@ -185,7 +184,7 @@ export const ScrollableGallery: React.FC<ScrollableGalleryProps> = ({
               aria-selected={index === currentImageIndex}
             >
               <img
-                src={image.url || image.image_url}
+                src={image.image_url}
                 alt={image.alt_text || `${propertyTitle} - Снимка ${index + 1}`}
                 className="w-full h-full object-cover"
                 onError={(e) => {

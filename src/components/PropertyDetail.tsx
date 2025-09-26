@@ -120,7 +120,7 @@ export const PropertyDetail: React.FC = () => {
                 <div className="aspect-video bg-gray-200 relative">
                   {currentImage ? (
                     <img
-                      src={currentImage.url || currentImage.image_url}
+                      src={currentImage.image_url}
                       alt={currentImage.alt_text || property.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -167,18 +167,9 @@ export const PropertyDetail: React.FC = () => {
               <h1 className="text-4xl font-bold text-gray-900 mb-6">{property.title}</h1>
               
               <div className="text-4xl font-bold text-blue-600 mb-8">
-                {property.pricing_mode === 'per_sqm' ? (
-                  <>
-                    €{Math.floor(property.price).toLocaleString()}
-                    <span className="text-lg text-gray-600 font-normal">/м²</span>
-                  </>
-                ) : (
-                  <>
-                    €{Math.floor(property.price).toLocaleString()}
-                    {property.transaction_type === 'rent' && (
-                      <span className="text-lg text-gray-600 font-normal">/месец</span>
-                    )}
-                  </>
+                €{Math.floor(property.price).toLocaleString()}
+                {property.transaction_type === 'rent' && (
+                  <span className="text-lg text-gray-600 font-normal">/месец</span>
                 )}
               </div>
 
