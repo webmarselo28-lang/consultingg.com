@@ -112,13 +112,21 @@ class ImageController {
                 exit;
             }
 
+            // Check existing images for this property
+            $existingImages = $this->imageModel->getByPropertyId($propertyId);
+            
+            // If this is the first image for the property, automatically make it the main image
+            if (count($existingImages) == 0) {
+                $isMain = true;
+                error_log('[ImageController] First image for property - automatically setting as main');
+            }
+
             // If this is set as main image, unset all other main images for this property first
             if ($isMain) {
                 $this->imageModel->unsetMainImages($propertyId);
             }
 
             // Check if property already has 50 images
-            $existingImages = $this->imageModel->getByPropertyId($propertyId);
             if (count($existingImages) >= 50) {
                 error_log('[ImageController] Too many images for property');
                 http_response_code(400);
