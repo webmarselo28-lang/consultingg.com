@@ -43,7 +43,7 @@ class PropertyImage {
     public function getByPropertyId($property_id) {
         $query = "SELECT * FROM " . $this->table_name . " 
                   WHERE property_id = :property_id 
-                  ORDER BY sort_order ASC";
+                  ORDER BY is_main DESC, sort_order ASC";
 
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':property_id', $property_id);
