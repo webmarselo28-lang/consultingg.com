@@ -5,6 +5,7 @@ import { ArrowLeft, Phone, Mail, MapPin, Bed, Bath, Square, Calendar, FileText }
 import { Property } from '../types/property';
 import { apiService } from '../services/api';
 import { ScrollableGallery } from './ScrollableGallery';
+import { ResponsiveImage, PreloadHeroImage } from './ResponsiveImage';
 
 export const PropertyDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -80,6 +81,11 @@ export const PropertyDetail: React.FC = () => {
         <title>{property.title} - ConsultingG Real Estate</title>
         <meta name="description" content={property.description || `${property.title} - ${property.city_region}, ${property.area}м², €${Math.floor(property.price).toLocaleString()}`} />
         <link rel="canonical" href={`https://consultingg.com/properties/${property.id}`} />
+        
+        {/* Preload hero image for LCP optimization */}
+        {property && images.length > 0 && (
+          <PreloadHeroImage src={images[0].image_url} />
+        )}
       </Helmet>
 
       {/* Header */}
@@ -119,9 +125,13 @@ export const PropertyDetail: React.FC = () => {
               <div className="relative">
                 <div className="aspect-video bg-gray-200 relative">
                   {currentImage ? (
-                    <img
+                    <ResponsiveImage
                       src={currentImage.image_url}
                       alt={currentImage.alt_text || property.title}
+                      variant="hero"
+                      priority={true}
+                      width={1920}
+                      height={1080}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;

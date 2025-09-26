@@ -8,6 +8,7 @@ import { apiService } from '../services/api';
 import { Property } from '../types/property';
 import Navbar from './Navbar';
 import { useProperties } from '../hooks/useProperties';
+import { ResponsiveImage } from './ResponsiveImage';
 
 export const PropertiesPage: React.FC = () => {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -208,11 +209,14 @@ export const PropertiesPage: React.FC = () => {
                     : 'hover:border-blue-200'
                 }`}
               >
-                <div className="relative">
-                  <img
+                <div className="relative h-48 overflow-hidden">
+                  <ResponsiveImage
                     src={property.images?.[0]?.url || property.images?.[0]?.image_url || '/images/1_kachta_simeonovo.jpg'}
                     alt={property.title}
-                    className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                    variant="card"
+                    width={640}
+                    height={360}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = '/images/1_kachta_simeonovo.jpg';

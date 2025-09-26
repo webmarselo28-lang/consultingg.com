@@ -214,7 +214,7 @@ class ImageController {
                     error_log('[ImageController] Image optimized successfully');
                 }
 
-                // Create thumbnail
+                // Create traditional thumbnail for backward compatibility
                 try {
                     $thumbnailInfo = ImageProcessor::createThumbnail($filePath, $thumbnailPath, 'medium');
                     if (file_exists($thumbnailPath)) {
@@ -224,6 +224,18 @@ class ImageController {
                 } catch (Exception $e) {
                     error_log('[ImageController] Thumbnail creation failed: ' . $e->getMessage());
                     // Continue without thumbnail - not critical
+                }
+
+                // Create responsive derivatives
+                try {
+                    $derivativeFiles = ImageProcessor::createDerivatives($filePath, $filename, $propertyDirFS);
+                    foreach ($derivativeFiles as $derivative) {
+                        $createdFiles[] = $derivative['path']; // Track for rollback
+                    }
+                    error_log('[ImageController] Created ' . count($derivativeFiles) . ' responsive derivatives');
+                } catch (Exception $e) {
+                    error_log('[ImageController] Derivative creation failed: ' . $e->getMessage());
+                    // Continue without derivatives - not critical for backward compatibility
                 }
 
                 // Get image dimensions and file info
