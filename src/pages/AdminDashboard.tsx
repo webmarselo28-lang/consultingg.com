@@ -75,15 +75,27 @@ export const AdminDashboard: React.FC = () => {
 
   const toggleFeatured = async (id: string, featured: boolean) => {
     try {
+      // Optimistic update
+      setProperties(prev => prev.map(p => 
+        p.id === id ? { ...p, featured: !featured } : p
+      ));
+
       const result = await apiService.updateProperty(id, { featured: !featured });
       if (result.success) {
-        setProperties(prev => prev.map(p => 
-          p.code === id ? { ...p, featured: !featured } : p
-        ));
         // Trigger a refresh of featured properties on homepage
         window.dispatchEvent(new CustomEvent('featuredPropertiesChanged'));
+      } else {
+        // Revert on error
+        setProperties(prev => prev.map(p => 
+          p.id === id ? { ...p, featured: featured } : p
+        ));
+        setError(result.error || 'Грешка при обновяване');
       }
     } catch (error) {
+      // Revert on error
+      setProperties(prev => prev.map(p => 
+        p.id === id ? { ...p, featured: featured } : p
+      ));
       setError('Грешка при обновяване');
     }
   };

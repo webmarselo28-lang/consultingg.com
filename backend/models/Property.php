@@ -232,7 +232,7 @@ class Property {
                                     'is_main', pi.is_main,
                                     'sort_order', pi.sort_order,
                                     'alt_text', pi.alt_text
-                                ) ORDER BY pi.sort_order ASC, pi.is_main DESC
+                                ) ORDER BY pi.is_main DESC, pi.sort_order ASC
                             ) FROM property_images pi WHERE pi.property_id = p.id),
                             '[]'::json
                          ) as images
