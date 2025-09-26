@@ -15,6 +15,7 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
   const [images, setImages] = useState<Array<{ 
     id?: string; 
     url: string; 
@@ -262,9 +263,7 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    
+  const processImageFiles = (files: File[]) => {
     if (files.length === 0) return;
     
     // Check total images limit
@@ -273,12 +272,15 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
       return;
     }
     
+    // Clear any previous errors
+    setError('');
+    
     // Process files and upload immediately if editing existing property
     files.forEach((file) => {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      // Validate file type - only PNG/JPG/JPEG allowed
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
-        setError(`Неподдържан формат на файл: ${file.type}. Моля използвайте JPEG, PNG или WebP.`);
+        setError(`Неподдържан формат на файл: ${file.type}. Моля използвайте PNG, JPG или JPEG.`);
         return;
       }
       
@@ -312,11 +314,44 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    processImageFiles(files);
     
     // Clear the input so the same file can be selected again
     e.target.value = '';
-    // Clear any previous errors
-    setError('');
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set dragOver to false if leaving the dropzone entirely
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    processImageFiles(files);
   };
 
   const uploadImageImmediately = async (file: File, propertyId: string, isMain: boolean) => {
@@ -1029,22 +1064,38 @@ export const AdminPropertyForm: React.FC<AdminPropertyFormProps> = ({ mode }) =>
             <h2 className="text-xl font-bold text-gray-900 mb-6">Снимки</h2>
             
             <div className="mb-6">
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100">
+              <div
+                className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+                  isDragOver
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+                }`}
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => {
+                  // Trigger file input when clicking the dropzone
+                  const fileInput = document.getElementById('image-upload-input') as HTMLInputElement;
+                  fileInput?.click();
+                }}
+              >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-8 h-8 mb-4 text-gray-500" />
+                  <Upload className={`w-8 h-8 mb-4 ${isDragOver ? 'text-blue-500' : 'text-gray-500'}`} />
                   <p className="mb-2 text-sm text-gray-500">
                     <span className="font-semibold">Кликнете за качване</span> или плъзнете файловете
                   </p>
                   <p className="text-xs text-gray-500">PNG, JPG или JPEG (MAX. 10MB)</p>
                 </div>
                 <input
+                  id="image-upload-input"
                   type="file"
                   className="hidden"
                   multiple
-                  accept="image/*"
+                  accept=".png,.jpg,.jpeg,image/png,image/jpeg"
                   onChange={handleImageUpload}
                 />
-              </label>
+              </div>
             </div>
 
             {images.length > 0 && (
