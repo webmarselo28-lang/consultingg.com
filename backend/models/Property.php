@@ -32,6 +32,11 @@ class Property {
             
             // Generate UUID
             $data['id'] = $this->generateUUID();
+            
+            // Generate sequential property code if not provided
+            if (empty($data['property_code'])) {
+                $data['property_code'] = $this->generateNextPropertyCode();
+            }
         
             // Handle optional fields - use NULL for missing/empty values in detail fields
             $data['description'] = !empty($data['description']) ? $data['description'] : null;
@@ -44,7 +49,6 @@ class Property {
             $data['heating'] = !empty($data['heating']) ? $data['heating'] : null;
             $data['year_built'] = isset($data['year_built']) && $data['year_built'] > 0 ? $data['year_built'] : null;
             $data['furnishing_level'] = !empty($data['furnishing_level']) ? $data['furnishing_level'] : null;
-            $data['property_code'] = !empty($data['property_code']) ? $data['property_code'] : null;
             $data['bedrooms'] = isset($data['bedrooms']) && $data['bedrooms'] > 0 ? $data['bedrooms'] : null;
             $data['bathrooms'] = isset($data['bathrooms']) && $data['bathrooms'] > 0 ? $data['bathrooms'] : null;
             $data['terraces'] = isset($data['terraces']) && $data['terraces'] > 0 ? $data['terraces'] : null;
@@ -518,6 +522,47 @@ class Property {
             mt_rand(0, 0x3fff) | 0x8000,
             mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
+    }
+    
+    private function generateNextPropertyCode() {
+        // Get existing property codes from database
+        $query = "SELECT property_code FROM " . $this->table_name . " 
+                  WHERE property_code IS NOT NULL AND property_code LIKE 'prop-%' 
+                  ORDER BY property_code DESC LIMIT 1";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        $result = $stmt->fetch();
+        
+        $nextNumber = 1; // Default start
+        
+        if ($result && !empty($result['property_code'])) {
+            // Extract number from prop-XXX format
+            if (preg_match('/^prop-(\d+)$/', $result['property_code'], $matches)) {
+                $nextNumber = (int)$matches[1] + 1;
+            }
+        }
+        
+        // Also check existing filesystem folders to be safe
+        $uploadsDir = __DIR__ . '/../../uploads/properties';
+        if (is_dir($uploadsDir)) {
+            $folders = glob($uploadsDir . '/prop-*', GLOB_ONLYDIR);
+            foreach ($folders as $folder) {
+                $folderName = basename($folder);
+                if (preg_match('/^prop-(\d+)$/', $folderName, $matches)) {
+                    $folderNumber = (int)$matches[1];
+                    if ($folderNumber >= $nextNumber) {
+                        $nextNumber = $folderNumber + 1;
+                    }
+                }
+            }
+        }
+        
+        // Determine padding based on existing codes
+        $maxNumber = max($nextNumber - 1, 1);
+        $paddingLength = max(3, strlen((string)$maxNumber)); // Minimum 3 digits, or match existing
+        
+        return 'prop-' . str_pad($nextNumber, $paddingLength, '0', STR_PAD_LEFT);
     }
 }
 ?>

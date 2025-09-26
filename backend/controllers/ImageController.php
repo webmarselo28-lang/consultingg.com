@@ -134,9 +134,12 @@ class ImageController {
                 exit;
             }
 
-            // Step 3: Ensure destination folder exists and is writable
-            $propertyDirFS = rtrim($this->uploadsFS, '/\\') . "/properties/$propertyId";
-            $propertyUrlBase = rtrim($this->uploadsPublic, '/\\') . "/properties/$propertyId";
+            // Step 3: Get property details to use property_code for folder naming
+            $property = $this->propertyModel->getById($propertyId);
+            $folderName = !empty($property['property_code']) ? $property['property_code'] : $propertyId;
+            
+            $propertyDirFS = rtrim($this->uploadsFS, '/\\') . "/properties/$folderName";
+            $propertyUrlBase = rtrim($this->uploadsPublic, '/\\') . "/properties/$folderName";
             
             // Check parent directory exists and is writable first
             $parentDir = dirname($propertyDirFS);
@@ -170,7 +173,19 @@ class ImageController {
             }
 
             require_once __DIR__ . '/../utils/ImageHelper.php';
-            $filename = ImageHelper::safeFilename($file['name'], $propertyId);
+            $filename = ImageHelper::preserveOriginalFilename($file['name']);
+            
+            // Handle duplicate filenames by appending a number
+            $originalFilename = $filename;
+            $counter = 1;
+            while (file_exists($propertyDirFS . '/' . $filename)) {
+                $pathInfo = pathinfo($originalFilename);
+                $basename = $pathInfo['filename'];
+                $extension = $pathInfo['extension'];
+                $filename = $basename . '_' . $counter . '.' . $extension;
+                $counter++;
+            }
+            
             $filePath = $propertyDirFS . '/' . $filename;
             $thumbnailFilename = pathinfo($filename, PATHINFO_FILENAME) . '_thumb.' . pathinfo($filename, PATHINFO_EXTENSION);
             $thumbnailPath = $propertyDirFS . '/' . $thumbnailFilename;

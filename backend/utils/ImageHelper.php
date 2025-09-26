@@ -24,6 +24,34 @@ class ImageHelper {
     }
     
     /**
+     * Preserve original filename with minimal sanitization
+     */
+    public static function preserveOriginalFilename($originalName) {
+        if (empty($originalName)) {
+            return 'image.jpg';
+        }
+        
+        $pathInfo = pathinfo($originalName);
+        $extension = strtolower($pathInfo['extension'] ?? 'jpg');
+        $basename = $pathInfo['filename'] ?? 'image';
+        
+        // Minimal sanitization: remove unsafe characters only
+        // Remove path separators and control characters
+        $safeBasename = preg_replace('/[\/\\\\:\*\?"<>\|]/', '', $basename);
+        $safeBasename = preg_replace('/[\x00-\x1F\x7F]/', '', $safeBasename);
+        
+        // Trim whitespace and dots from ends
+        $safeBasename = trim($safeBasename, ' .');
+        
+        // Fallback if filename becomes empty
+        if (empty($safeBasename)) {
+            $safeBasename = 'image';
+        }
+        
+        return $safeBasename . '.' . $extension;
+    }
+    
+    /**
      * Convert string to ASCII slug
      */
     private static function slugify($text) {
