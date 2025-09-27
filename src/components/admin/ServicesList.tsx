@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Edit, Trash2, Eye, Plus, Settings } from 'lucide-react';
+import { Edit, Trash2, Plus, Settings, ArrowLeft } from 'lucide-react';
 import { apiService } from '../../services/api';
 
 interface Service {
@@ -98,9 +98,18 @@ export const ServicesList: React.FC = () => {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Услуги</h1>
-          <p className="text-gray-600">Управление на всички услуги ({services.length} общо)</p>
+        <div className="flex items-center gap-4">
+          <Link
+            to="/admin"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Назад към панел
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Услуги</h1>
+            <p className="text-gray-600">Управление на всички услуги ({services.length} общо)</p>
+          </div>
         </div>
         <Link
           to="/admin/services/new"
