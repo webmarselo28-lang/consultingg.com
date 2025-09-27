@@ -108,7 +108,7 @@ class Property {
     }
 
     public function getAll($filters = []) {
-        $query = "SELECT p.id, p.title, p.description, p.price, p.currency, p.transaction_type, 
+        $query = "SELECT p.id, p.property_code, p.title, p.description, p.price, p.currency, p.transaction_type, 
                          p.property_type, p.city_region, p.district, p.address, p.area, 
                          p.bedrooms, p.bathrooms, p.floors, p.floor_number, p.terraces, 
                          p.construction_type, p.condition_type, p.heating, p.exposure, 
