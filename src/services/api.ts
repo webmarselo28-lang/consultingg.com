@@ -413,6 +413,24 @@ class ApiService {
     }
   }
 
+  async updatePropertyOrder(orders: Array<{ id: string; sort_order: number }>): Promise<ApiResponse<void>> {
+    try {
+      const response = await fetch(`${API_BASE}/properties`, {
+        method: 'PATCH',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ orders })
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('API error in updatePropertyOrder:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Грешка при обновяване на подредбата'
+      };
+    }
+  }
+
   async uploadImage(file: File, propertyId: string, isMain = false): Promise<ApiResponse<any>> {
     try {
       console.log('Uploading image:', { fileName: file.name, fileSize: file.size, propertyId, isMain });

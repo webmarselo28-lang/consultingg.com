@@ -341,5 +341,48 @@ class PropertyController {
 
         return ['valid' => true];
     }
+
+    public function updateOrder() {
+        try {
+            // Skip auth for demo mode
+            if (!isset($_ENV['WEBCONTAINER_ENV']) && !isset($_ENV['DEMO_MODE'])) {
+                AuthMiddleware::requireAdmin();
+            }
+
+            $data = json_decode(file_get_contents("php://input"), true);
+
+            if (!isset($data['orders']) || !is_array($data['orders'])) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Invalid order data']);
+                exit;
+            }
+
+            // Validate order data
+            foreach ($data['orders'] as $item) {
+                if (!isset($item['id']) || !isset($item['sort_order'])) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'Each item must have id and sort_order']);
+                    exit;
+                }
+            }
+
+            $success = $this->propertyModel->updateMultipleSortOrders($data['orders']);
+
+            if ($success) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Property order updated successfully'
+                ]);
+            } else {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Failed to update property order']);
+            }
+        } catch (Throwable $e) {
+            error_log('[PropertyController@updateOrder] ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Server error']);
+        }
+        exit;
+    }
 }
 ?>

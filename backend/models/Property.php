@@ -20,13 +20,13 @@ class Property {
                        city_region, district, address, area, bedrooms, bathrooms, floors, 
                        floor_number, terraces, construction_type, condition_type, heating, 
                        year_built, furnishing_level, has_elevator, has_garage, 
-                       has_southern_exposure, new_construction, featured, active, property_code) 
+                       has_southern_exposure, new_construction, featured, active, property_code, sort_order) 
                       VALUES 
                       (:id, :title, :description, :price, :currency, :transaction_type, :property_type,
                        :city_region, :district, :address, :area, :bedrooms, :bathrooms, :floors,
                        :floor_number, :terraces, :construction_type, :condition_type, :heating,
                        :year_built, :furnishing_level, :has_elevator, :has_garage,
-                       :has_southern_exposure, :new_construction, :featured, :active, :property_code)";
+                       :has_southern_exposure, :new_construction, :featured, :active, :property_code, :sort_order)";
 
             $stmt = $this->conn->prepare($query);
             
@@ -36,6 +36,14 @@ class Property {
             // Generate sequential property code if not provided
             if (empty($data['property_code'])) {
                 $data['property_code'] = $this->generateNextPropertyCode();
+            }
+            
+            // Generate next sort_order value if not provided
+            if (!isset($data['sort_order'])) {
+                $sortOrderQuery = "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM " . $this->table_name;
+                $sortOrderStmt = $this->conn->prepare($sortOrderQuery);
+                $sortOrderStmt->execute();
+                $data['sort_order'] = (int)$sortOrderStmt->fetchColumn();
             }
         
             // Handle optional fields - use NULL for missing/empty values in detail fields
@@ -83,6 +91,7 @@ class Property {
             $stmt->bindParam(':featured', $data['featured'], PDO::PARAM_BOOL);
             $stmt->bindParam(':active', $data['active'], PDO::PARAM_BOOL);
             $stmt->bindParam(':property_code', $data['property_code']);
+            $stmt->bindParam(':sort_order', $data['sort_order'], PDO::PARAM_INT);
 
             if ($stmt->execute()) {
                 $this->conn->commit();
@@ -105,7 +114,7 @@ class Property {
                          p.construction_type, p.condition_type, p.heating, p.exposure, 
                          p.year_built, p.furnishing_level, p.has_elevator, p.has_garage, 
                          p.has_southern_exposure, p.new_construction, p.featured, p.active, 
-                         p.created_at, p.updated_at,
+                         p.sort_order, p.created_at, p.updated_at,
                          COALESCE(
                             (SELECT json_agg(
                                 json_build_object(
@@ -181,7 +190,7 @@ class Property {
             $query .= " AND p.active = TRUE";
         }
 
-        $query .= " ORDER BY p.featured DESC, p.created_at DESC";
+        $query .= " ORDER BY (p.sort_order IS NULL), p.sort_order ASC, p.created_at DESC, p.id ASC";
 
         if (!empty($filters['limit'])) {
             $query .= " LIMIT :limit";
@@ -476,7 +485,7 @@ class Property {
                        p.construction_type, p.condition_type, p.heating, p.exposure, 
                        p.year_built, p.furnishing_level, p.has_elevator, p.has_garage, 
                        p.has_southern_exposure, p.new_construction, p.featured, p.active, 
-                       p.created_at, p.updated_at,
+                       p.sort_order, p.created_at, p.updated_at,
                        COALESCE(
                           (SELECT json_agg(
                               json_build_object(
@@ -493,7 +502,7 @@ class Property {
                        ) as images
                 FROM " . $this->table_name . " p 
                 WHERE $whereSql
-                ORDER BY p.featured DESC, p.created_at DESC
+                ORDER BY (p.sort_order IS NULL), p.sort_order ASC, p.created_at DESC, p.id ASC
                 LIMIT :limit OFFSET :offset";
 
         $stmt = $this->conn->prepare($sql);
@@ -584,6 +593,38 @@ class Property {
         $paddingLength = max(3, strlen((string)$maxNumber)); // Minimum 3 digits, or match existing
         
         return 'prop-' . str_pad($nextNumber, $paddingLength, '0', STR_PAD_LEFT);
+    }
+
+    public function updateSortOrder($id, $sortOrder) {
+        $query = "UPDATE " . $this->table_name . " 
+                  SET sort_order = :sort_order, updated_at = CURRENT_TIMESTAMP
+                  WHERE id = :id";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id);
+        $stmt->bindParam(':sort_order', $sortOrder, PDO::PARAM_INT);
+        
+        return $stmt->execute();
+    }
+
+    public function updateMultipleSortOrders($orderData) {
+        $this->conn->beginTransaction();
+        try {
+            foreach ($orderData as $item) {
+                if (isset($item['id']) && isset($item['sort_order'])) {
+                    $success = $this->updateSortOrder($item['id'], $item['sort_order']);
+                    if (!$success) {
+                        throw new Exception("Failed to update sort order for property ID: " . $item['id']);
+                    }
+                }
+            }
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log('[PROPERTY] Update sort orders error: ' . $e->getMessage());
+            return false;
+        }
     }
 }
 ?>

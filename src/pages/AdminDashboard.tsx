@@ -251,7 +251,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Update custom order by merging current page changes with existing order
-  const updateCustomOrderForCurrentPage = (newPageProperties: Property[]) => {
+  const updateCustomOrderForCurrentPage = async (newPageProperties: Property[]) => {
     try {
       const currentPageIds = newPageProperties.map(p => p.id);
       const existingOrder = [...customOrder];
@@ -281,11 +281,41 @@ export const AdminDashboard: React.FC = () => {
         ...otherPagesOrder.slice(insertIndex)
       ];
       
+      // Save to localStorage for immediate UI feedback
       saveCustomOrder(newOrder);
+      
+      // Persist to database - prepare orders with sort_order values
+      const orders = newOrder.map((id, index) => ({
+        id,
+        sort_order: index + 1
+      }));
+      
+      try {
+        const result = await apiService.updatePropertyOrder(orders);
+        if (!result.success) {
+          console.error('Failed to persist property order to database:', result.error);
+          // We don't show this error to user as localStorage order still works
+        }
+      } catch (error) {
+        console.error('Error persisting property order to database:', error);
+        // We don't show this error to user as localStorage order still works
+      }
     } catch (error) {
       console.error('Error updating custom order:', error);
       // Fallback to simple save for current page only
-      saveCustomOrder(newPageProperties.map(p => p.id));
+      const fallbackIds = newPageProperties.map(p => p.id);
+      saveCustomOrder(fallbackIds);
+      
+      // Also try to persist the fallback order
+      try {
+        const fallbackOrders = fallbackIds.map((id, index) => ({
+          id,
+          sort_order: index + 1
+        }));
+        await apiService.updatePropertyOrder(fallbackOrders);
+      } catch (error) {
+        console.error('Error persisting fallback order:', error);
+      }
     }
   };
 
@@ -311,7 +341,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Handle drag end
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (!over || active.id === over.id) return;
@@ -326,11 +356,11 @@ export const AdminDashboard: React.FC = () => {
     setSortedProperties(newProperties);
     
     // Update custom order properly by merging with existing order
-    updateCustomOrderForCurrentPage(newProperties);
+    await updateCustomOrderForCurrentPage(newProperties);
   };
 
   // Handle position change from numeric input
-  const handlePositionChange = (propertyId: string, newPosition: number) => {
+  const handlePositionChange = async (propertyId: string, newPosition: number) => {
     const maxPosition = sortedProperties.length - 1;
     const clampedPosition = Math.max(0, Math.min(newPosition, maxPosition));
     
@@ -341,7 +371,7 @@ export const AdminDashboard: React.FC = () => {
     setSortedProperties(newProperties);
     
     // Update custom order properly by merging with existing order
-    updateCustomOrderForCurrentPage(newProperties);
+    await updateCustomOrderForCurrentPage(newProperties);
   };
 
   // Reset to default order

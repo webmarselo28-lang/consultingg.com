@@ -63,7 +63,15 @@ try {
         break;
         
     case 'PATCH':
-        if (!empty($pathParts[0])) {
+        if (empty($pathParts[0])) {
+            // PATCH /properties - update orders
+            if ($_SERVER['CONTENT_TYPE'] === 'application/json' || strpos($_SERVER['CONTENT_TYPE'], 'application/json') === 0) {
+                $propertyController->updateOrder();
+            } else {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Invalid content type']);
+            }
+        } elseif (!empty($pathParts[0])) {
             if (isset($pathParts[1]) && $pathParts[1] === 'images' && isset($pathParts[2]) && isset($pathParts[3]) && $pathParts[3] === 'main') {
                 // PATCH /properties/{id}/images/{imageId}/main
                 require_once __DIR__ . '/../controllers/ImageController.php';
