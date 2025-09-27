@@ -6,7 +6,7 @@ class Database {
 
     private function __construct() {
         // Parse DATABASE_URL if available (Replit style)
-        if (isset($_ENV['DATABASE_URL'])) {
+        if (isset($_ENV['DATABASE_URL']) && !empty($_ENV['DATABASE_URL'])) {
             $dbUrl = parse_url($_ENV['DATABASE_URL']);
             $host = $dbUrl['host'] ?? 'localhost';
             $port = $dbUrl['port'] ?? '5432';
