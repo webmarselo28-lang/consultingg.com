@@ -26,6 +26,8 @@ import { CSS } from '@dnd-kit/utilities';
 interface SortablePropertyRowProps {
   property: Property;
   index: number;
+  currentPage: number;
+  itemsPerPage: number;
   onToggleFeatured: (id: string, featured: boolean) => void;
   onToggleActive: (id: string, active: boolean) => void;
   onDelete: (id: string) => void;
@@ -35,6 +37,8 @@ interface SortablePropertyRowProps {
 const SortablePropertyRow: React.FC<SortablePropertyRowProps> = ({
   property,
   index,
+  currentPage,
+  itemsPerPage,
   onToggleFeatured,
   onToggleActive,
   onDelete,
@@ -77,7 +81,7 @@ const SortablePropertyRow: React.FC<SortablePropertyRowProps> = ({
           </div>
           <input
             type="number"
-            value={index + 1}
+            value={(currentPage - 1) * itemsPerPage + index + 1}
             onChange={(e) => {
               const newPosition = parseInt(e.target.value) - 1;
               if (newPosition >= 0) {
@@ -638,6 +642,8 @@ export const AdminDashboard: React.FC = () => {
                         key={property.id}
                         property={property}
                         index={index}
+                        currentPage={currentPage}
+                        itemsPerPage={itemsPerPage}
                         onToggleFeatured={toggleFeatured}
                         onToggleActive={toggleActive}
                         onDelete={setDeleteId}
