@@ -12,7 +12,6 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
@@ -22,12 +21,165 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// Position Input Component with proper controlled input pattern
+interface PositionInputProps {
+  currentPosition: number;
+  maxPosition: number;
+  onPositionChange: (position: number) => void;
+  propertyId: string;
+}
+
+const PositionInput: React.FC<PositionInputProps> = ({
+  currentPosition,
+  maxPosition,
+  onPositionChange,
+  propertyId,
+}) => {
+  const [inputValue, setInputValue] = useState<string>(currentPosition.toString());
+  const [isEditing, setIsEditing] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Update input value when currentPosition changes (e.g., after successful update)
+  useEffect(() => {
+    if (!isEditing) {
+      setInputValue(currentPosition.toString());
+      setHasError(false);
+      setErrorMessage('');
+    }
+  }, [currentPosition, isEditing]);
+
+  const validateAndCommit = (value: string) => {
+    const trimmedValue = value.trim();
+    
+    // Reset error state
+    setHasError(false);
+    setErrorMessage('');
+
+    // Check if empty
+    if (!trimmedValue) {
+      setHasError(true);
+      setErrorMessage('Position is required');
+      return false;
+    }
+
+    // Parse number
+    const numValue = Number(trimmedValue);
+    
+    // Check if valid integer
+    if (isNaN(numValue) || !Number.isInteger(numValue)) {
+      setHasError(true);
+      setErrorMessage('Must be a whole number');
+      return false;
+    }
+
+    // Check range
+    if (numValue < 1 || numValue > maxPosition) {
+      setHasError(true);
+      setErrorMessage(`Must be between 1 and ${maxPosition}`);
+      return false;
+    }
+
+    // Valid - commit the change
+    if (numValue !== currentPosition) {
+      onPositionChange(numValue - 1); // Convert to 0-based index
+    }
+    return true;
+  };
+
+  const handleFocus = () => {
+    setIsEditing(true);
+    setHasError(false);
+    setErrorMessage('');
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    const isValid = validateAndCommit(inputValue);
+    if (!isValid) {
+      // Reset to current position if invalid
+      setInputValue(currentPosition.toString());
+      // Clear error after a delay
+      setTimeout(() => {
+        setHasError(false);
+        setErrorMessage('');
+      }, 3000);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const isValid = validateAndCommit(inputValue);
+      if (isValid) {
+        setIsEditing(false);
+        (e.target as HTMLInputElement).blur();
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setInputValue(currentPosition.toString());
+      setIsEditing(false);
+      setHasError(false);
+      setErrorMessage('');
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+    
+    // Clear error while typing
+    if (hasError) {
+      setHasError(false);
+      setErrorMessage('');
+    }
+  };
+
+  // Prevent drag events from interfering
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="number"
+        value={inputValue}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        onMouseDown={handleMouseDown}
+        className={`w-12 px-1 py-1 text-xs border rounded text-center transition-colors
+          ${hasError 
+            ? 'border-red-300 bg-red-50 text-red-900' 
+            : isEditing 
+              ? 'border-blue-300 bg-blue-50' 
+              : 'border-gray-300 hover:border-gray-400'
+          }`}
+        min="1"
+        max={maxPosition}
+        step="1"
+        title={hasError ? errorMessage : `Position (1-${maxPosition})`}
+        data-testid={`input-position-${propertyId}`}
+      />
+      {hasError && (
+        <div className="absolute z-10 mt-1 px-2 py-1 text-xs text-red-700 bg-red-100 border border-red-300 rounded shadow-lg whitespace-nowrap">
+          {errorMessage}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Sortable Property Row Component
 interface SortablePropertyRowProps {
   property: Property;
   index: number;
   currentPage: number;
   itemsPerPage: number;
+  totalProperties: number;
   onToggleFeatured: (id: string, featured: boolean) => void;
   onToggleActive: (id: string, active: boolean) => void;
   onDelete: (id: string) => void;
@@ -39,6 +191,7 @@ const SortablePropertyRow: React.FC<SortablePropertyRowProps> = ({
   index,
   currentPage,
   itemsPerPage,
+  totalProperties,
   onToggleFeatured,
   onToggleActive,
   onDelete,
@@ -79,18 +232,11 @@ const SortablePropertyRow: React.FC<SortablePropertyRowProps> = ({
           >
             <GripVertical className="w-4 h-4" />
           </div>
-          <input
-            type="number"
-            value={(currentPage - 1) * itemsPerPage + index + 1}
-            onChange={(e) => {
-              const newPosition = parseInt(e.target.value) - 1;
-              if (newPosition >= 0) {
-                onPositionChange(property.id, newPosition);
-              }
-            }}
-            className="w-12 px-1 py-1 text-xs border border-gray-300 rounded text-center"
-            min="1"
-            title="Позиция"
+          <PositionInput
+            currentPosition={(currentPage - 1) * itemsPerPage + index + 1}
+            maxPosition={totalProperties}
+            onPositionChange={(position) => onPositionChange(property.id, position)}
+            propertyId={property.id}
           />
         </div>
       </td>
@@ -225,97 +371,9 @@ export const AdminDashboard: React.FC = () => {
     })
   );
 
-  // Load custom order from localStorage (disabled - using DB sort_order only)
-  const loadCustomOrder = () => {
-    // Clear any existing localStorage cache to prevent conflicts with DB ordering
-    localStorage.removeItem('property-custom-order');
-    return [];
-  };
+  // Legacy localStorage functions removed - using database sort_order only
 
-  // Save custom order to localStorage
-  const saveCustomOrder = (order: string[]) => {
-    try {
-      localStorage.setItem('property-custom-order', JSON.stringify(order));
-      setCustomOrder(order);
-    } catch (error) {
-      console.error('Error saving custom order:', error);
-    }
-  };
-
-  // Update custom order by merging current page changes with existing order
-  const updateCustomOrderForCurrentPage = async (newPageProperties: Property[]) => {
-    try {
-      const currentPageIds = newPageProperties.map(p => p.id);
-      const existingOrder = [...customOrder];
-      
-      // Remove current page items from existing order
-      const otherPagesOrder = existingOrder.filter(id => !currentPageIds.includes(id));
-      
-      // Find the insertion point (where the first current page item was in the original order)
-      const firstCurrentPageId = properties[0]?.id;
-      let insertIndex = otherPagesOrder.length; // Default to end
-      
-      if (firstCurrentPageId) {
-        const originalIndex = existingOrder.indexOf(firstCurrentPageId);
-        if (originalIndex >= 0) {
-          // Count how many of the "other pages" items come before this position
-          insertIndex = otherPagesOrder.filter(id => {
-            const origPos = existingOrder.indexOf(id);
-            return origPos >= 0 && origPos < originalIndex;
-          }).length;
-        }
-      }
-      
-      // Insert current page order at the correct position
-      const newOrder = [
-        ...otherPagesOrder.slice(0, insertIndex),
-        ...currentPageIds,
-        ...otherPagesOrder.slice(insertIndex)
-      ];
-      
-      // Save to localStorage for immediate UI feedback
-      saveCustomOrder(newOrder);
-      
-      // Persist to database - prepare orders with sort_order values
-      const orders = newOrder.map((id, index) => ({
-        id,
-        sort_order: index + 1
-      }));
-      
-      try {
-        const result = await apiService.updatePropertyOrder(orders);
-        if (!result.success) {
-          console.error('Failed to persist property order to database:', result.error);
-          // We don't show this error to user as localStorage order still works
-        }
-      } catch (error) {
-        console.error('Error persisting property order to database:', error);
-        // We don't show this error to user as localStorage order still works
-      }
-    } catch (error) {
-      console.error('Error updating custom order:', error);
-      // Fallback to simple save for current page only
-      const fallbackIds = newPageProperties.map(p => p.id);
-      saveCustomOrder(fallbackIds);
-      
-      // Also try to persist the fallback order
-      try {
-        const fallbackOrders = fallbackIds.map((id, index) => ({
-          id,
-          sort_order: index + 1
-        }));
-        await apiService.updatePropertyOrder(fallbackOrders);
-      } catch (error) {
-        console.error('Error persisting fallback order:', error);
-      }
-    }
-  };
-
-  // Apply custom ordering to properties (disabled - using DB sort_order only)
-  const applyCustomOrder = (props: Property[], order: string[]): Property[] => {
-    // Always use database sort_order for consistent ordering
-    return props;
-  };
+  // Legacy functions removed - using database sort_order only
 
   // Handle drag end
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -454,7 +512,7 @@ export const AdminDashboard: React.FC = () => {
     }
 
     fetchProperties();
-    loadCustomOrder();
+    // Custom order loading disabled - using database sort_order only
   }, [navigate]);
 
   // Apply custom order when properties or custom order changes
@@ -739,6 +797,7 @@ export const AdminDashboard: React.FC = () => {
                         index={index}
                         currentPage={currentPage}
                         itemsPerPage={itemsPerPage}
+                        totalProperties={totalProperties}
                         onToggleFeatured={toggleFeatured}
                         onToggleActive={toggleActive}
                         onDelete={setDeleteId}
