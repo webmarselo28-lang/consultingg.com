@@ -301,7 +301,7 @@ const SortablePropertyRow: React.FC<SortablePropertyRowProps> = ({
       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
         <div className="flex items-center gap-2">
           <Link
-            to={`/properties/${property.id}`}
+            to={`/properties/${property.property_code}`}
             target="_blank"
             className="text-blue-600 hover:text-blue-900 p-1 rounded"
             title="Преглед"

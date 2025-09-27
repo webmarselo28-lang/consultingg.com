@@ -1,5 +1,6 @@
 export interface Property {
   id: string;
+  property_code: string;
   title: string;
   description?: string;
   price: number;

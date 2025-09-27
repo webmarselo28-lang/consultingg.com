@@ -79,7 +79,7 @@ export const PropertyDetail: React.FC = () => {
       <Helmet>
         <title>{property.title} - ConsultingG Real Estate</title>
         <meta name="description" content={property.description || `${property.title} - ${property.city_region}, ${property.area}м², €${Math.floor(property.price).toLocaleString()}`} />
-        <link rel="canonical" href={`https://consultingg.com/properties/${property.id}`} />
+        <link rel="canonical" href={`https://consultingg.com/properties/${property.property_code}`} />
       </Helmet>
 
       {/* Header */}
