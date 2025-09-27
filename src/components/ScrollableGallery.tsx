@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { ResponsiveImage } from './ResponsiveImage';
 
 interface Image {
   id: string;
@@ -184,17 +183,15 @@ export const ScrollableGallery: React.FC<ScrollableGalleryProps> = ({
               role="option"
               aria-selected={index === currentImageIndex}
             >
-              <ResponsiveImage
+              <img
                 src={image.image_url}
                 alt={image.alt_text || `${propertyTitle} - Снимка ${index + 1}`}
-                variant="thumb"
-                width={160}
-                height={128}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = '/images/placeholder.jpg';
                 }}
+                draggable={false}
               />
             </button>
           ))}
