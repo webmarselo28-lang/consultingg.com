@@ -228,7 +228,30 @@ class Property {
 
     public function getById($id) {
         error_log("Property::getById called with ID: " . $id);
-        $query = "SELECT p.id, p.title, p.description, p.price, p.currency, p.transaction_type, 
+        return $this->getByIdOrCode($id);
+    }
+
+    public function getByCode($code) {
+        error_log("Property::getByCode called with code: " . $code);
+        return $this->getByIdOrCode($code, true);
+    }
+
+    private function getByIdOrCode($identifier, $preferCode = false) {
+        error_log("Property::getByIdOrCode called with identifier: " . $identifier);
+        
+        // If preferCode is true, lookup by property_code first, otherwise by id first
+        if ($preferCode) {
+            $whereClause = "p.property_code = :identifier";
+        } else {
+            // Try to determine if identifier is a UUID or a property code
+            if (preg_match('/^prop-[0-9]+$/', $identifier)) {
+                $whereClause = "p.property_code = :identifier";
+            } else {
+                $whereClause = "p.id = :identifier";
+            }
+        }
+        
+        $query = "SELECT p.id, p.property_code, p.title, p.description, p.price, p.currency, p.transaction_type, 
                          p.property_type, p.city_region, p.district, p.address, p.area, 
                          p.bedrooms, p.bathrooms, p.floors, p.floor_number, p.terraces, 
                          p.construction_type, p.condition_type, p.heating, p.exposure, 
@@ -249,10 +272,10 @@ class Property {
                             ) FROM property_images pi WHERE pi.property_id = p.id),
                             '[]'::json
                          ) as images
-                  FROM " . $this->table_name . " p WHERE p.id = :id";
+                  FROM " . $this->table_name . " p WHERE " . $whereClause;
 
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $id);
+        $stmt->bindParam(':identifier', $identifier);
         $stmt->execute();
 
         $property = $stmt->fetch();

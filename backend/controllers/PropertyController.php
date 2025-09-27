@@ -67,6 +67,18 @@ class PropertyController {
                 exit;
             }
 
+            // If accessed by UUID but property has a canonical code, redirect to canonical URL
+            if ($id !== $property['property_code'] && !preg_match('/^prop-[0-9]+$/', $id)) {
+                $canonicalUrl = '/api/properties/' . $property['property_code'];
+                header('Location: ' . $canonicalUrl, true, 301);
+                echo json_encode([
+                    'success' => true,
+                    'redirect' => $canonicalUrl,
+                    'message' => 'Property moved to canonical URL'
+                ]);
+                exit;
+            }
+
             echo json_encode([
                 'success' => true,
                 'data' => $property
