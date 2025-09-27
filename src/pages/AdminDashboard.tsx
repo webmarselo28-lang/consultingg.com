@@ -225,18 +225,10 @@ export const AdminDashboard: React.FC = () => {
     })
   );
 
-  // Load custom order from localStorage
+  // Load custom order from localStorage (disabled - using DB sort_order only)
   const loadCustomOrder = () => {
-    try {
-      const saved = localStorage.getItem('property-custom-order');
-      if (saved) {
-        const order = JSON.parse(saved);
-        setCustomOrder(order);
-        return order;
-      }
-    } catch (error) {
-      console.error('Error loading custom order:', error);
-    }
+    // Clear any existing localStorage cache to prevent conflicts with DB ordering
+    localStorage.removeItem('property-custom-order');
     return [];
   };
 
@@ -319,25 +311,10 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Apply custom ordering to properties
+  // Apply custom ordering to properties (disabled - using DB sort_order only)
   const applyCustomOrder = (props: Property[], order: string[]): Property[] => {
-    if (order.length === 0) return props;
-    
-    const orderedProps: Property[] = [];
-    const remainingProps = [...props];
-    
-    // First, add properties in custom order
-    order.forEach(id => {
-      const index = remainingProps.findIndex(p => p.id === id);
-      if (index !== -1) {
-        orderedProps.push(remainingProps.splice(index, 1)[0]);
-      }
-    });
-    
-    // Then add any new properties that aren't in the custom order
-    orderedProps.push(...remainingProps);
-    
-    return orderedProps;
+    // Always use database sort_order for consistent ordering
+    return props;
   };
 
   // Handle drag end
@@ -352,26 +329,114 @@ export const AdminDashboard: React.FC = () => {
     // Guard against invalid indexes
     if (oldIndex < 0 || newIndex < 0) return;
     
-    const newProperties = arrayMove(sortedProperties, oldIndex, newIndex);
-    setSortedProperties(newProperties);
+    // Calculate global position for the target
+    const globalNewPosition = (currentPage - 1) * itemsPerPage + newIndex;
     
-    // Update custom order properly by merging with existing order
-    await updateCustomOrderForCurrentPage(newProperties);
+    try {
+      // Use global position update for cross-page compatibility
+      await updateGlobalPosition(active.id as string, globalNewPosition);
+      
+      // Refresh the current page to reflect the new order
+      await fetchProperties(currentPage);
+    } catch (error) {
+      console.error('Error updating drag position:', error);
+      setError('Грешка при обновяване на подредбата');
+    }
+  };
+
+  // Update global position across all pages
+  const updateGlobalPosition = async (propertyId: string, targetPosition: number) => {
+    try {
+      // Robust fetch with multiple fallback strategies
+      let allProperties: Property[] = [];
+      
+      // Strategy 1: Use totalProperties if available
+      if (totalProperties > 0) {
+        const result = await apiService.getProperties({ active: 'all' }, 1, totalProperties);
+        if (result.success && result.data && result.data.length > 0) {
+          allProperties = result.data;
+        }
+      }
+      
+      // Strategy 2: Fallback to high limit if first attempt failed
+      if (allProperties.length === 0) {
+        const fallbackResult = await apiService.getProperties({ active: 'all' }, 1, 1000);
+        if (fallbackResult.success && fallbackResult.data) {
+          allProperties = fallbackResult.data;
+        }
+      }
+      
+      // Strategy 3: If still empty, try paginated fetch
+      if (allProperties.length === 0) {
+        let page = 1;
+        const pageSize = 50;
+        let hasMore = true;
+        
+        while (hasMore && page <= 20) { // Safety limit
+          const pageResult = await apiService.getProperties({ active: 'all' }, page, pageSize);
+          if (pageResult.success && pageResult.data && pageResult.data.length > 0) {
+            allProperties.push(...pageResult.data);
+            hasMore = pageResult.data.length === pageSize;
+            page++;
+          } else {
+            hasMore = false;
+          }
+        }
+      }
+      
+      // Final validation
+      if (allProperties.length === 0) {
+        throw new Error('Unable to fetch properties for reordering');
+      }
+      
+      // Find the property to move
+      const propertyIndex = allProperties.findIndex(p => p.id === propertyId);
+      if (propertyIndex === -1) {
+        throw new Error('Property not found in current list');
+      }
+
+      // Remove the property from its current position
+      const [movedProperty] = allProperties.splice(propertyIndex, 1);
+      
+      // Insert it at the target position
+      allProperties.splice(targetPosition, 0, movedProperty);
+
+      // Create new global order with updated sort_order values
+      const orders = allProperties.map((property, index) => ({
+        id: property.id,
+        sort_order: index + 1
+      }));
+
+      // Update the database with the new global order
+      const result = await apiService.updatePropertyOrder(orders);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update property order');
+      }
+
+      // Clear localStorage cache to force refresh from database
+      localStorage.removeItem('property-custom-order');
+      setCustomOrder([]);
+
+    } catch (error) {
+      throw error;
+    }
   };
 
   // Handle position change from numeric input
   const handlePositionChange = async (propertyId: string, newPosition: number) => {
-    const maxPosition = sortedProperties.length - 1;
-    const clampedPosition = Math.max(0, Math.min(newPosition, maxPosition));
+    // For global reordering, allow positions from 0 to totalProperties-1
+    const clampedPosition = Math.max(0, Math.min(newPosition, totalProperties - 1));
     
-    const oldIndex = sortedProperties.findIndex(p => p.id === propertyId);
-    if (oldIndex === clampedPosition || oldIndex < 0) return;
-    
-    const newProperties = arrayMove(sortedProperties, oldIndex, clampedPosition);
-    setSortedProperties(newProperties);
-    
-    // Update custom order properly by merging with existing order
-    await updateCustomOrderForCurrentPage(newProperties);
+    try {
+      // Create a new global order by inserting the property at the target position
+      await updateGlobalPosition(propertyId, clampedPosition);
+      
+      // Refresh the properties list to reflect the new order
+      await fetchProperties(currentPage);
+    } catch (error) {
+      console.error('Error updating global position:', error);
+      setError('Грешка при обновяване на позицията');
+    }
   };
 
   // Reset to default order
@@ -394,9 +459,9 @@ export const AdminDashboard: React.FC = () => {
 
   // Apply custom order when properties or custom order changes
   useEffect(() => {
-    const ordered = applyCustomOrder(properties, customOrder);
-    setSortedProperties(ordered);
-  }, [properties, customOrder]);
+    // Use database ordering directly - properties are already sorted by sort_order
+    setSortedProperties(properties);
+  }, [properties]);
 
   const fetchProperties = async (page: number = currentPage) => {
     setLoading(true);
