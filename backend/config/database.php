@@ -5,8 +5,17 @@ class Database {
     private static $instance = null;
 
     private function __construct() {
-        // Parse DATABASE_URL if available (Replit style)
-        if (isset($_ENV['DATABASE_URL']) && !empty($_ENV['DATABASE_URL'])) {
+        // Priority: Use SuperHosting discrete DB_* variables if DB_HOST is set, otherwise fall back to DATABASE_URL
+        if (isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST'])) {
+            // Use individual SuperHosting environment variables - NO HARDCODED CREDENTIALS
+            $host = $_ENV['DB_HOST'];
+            $dbname = $_ENV['DB_NAME'] ?? 'postgres';
+            $user = $_ENV['DB_USER'] ?? 'postgres';
+            $pass = $_ENV['DB_PASS'] ?? '';
+            $port = $_ENV['DB_PORT'] ?? '5432';
+            $sslmode = $_ENV['DB_SSLMODE'] ?? 'require';
+        } else if (isset($_ENV['DATABASE_URL']) && !empty($_ENV['DATABASE_URL'])) {
+            // Parse DATABASE_URL if available (Replit style)
             $dbUrl = parse_url($_ENV['DATABASE_URL']);
             $host = $dbUrl['host'] ?? 'localhost';
             $port = $dbUrl['port'] ?? '5432';
@@ -15,13 +24,13 @@ class Database {
             $pass = $dbUrl['pass'] ?? '';
             $sslmode = 'require';
         } else {
-            // Fallback to individual environment variables - NO HARDCODED CREDENTIALS
-            $host = $_ENV['DB_HOST'] ?? $_ENV['PGHOST'] ?? 'localhost';
-            $dbname = $_ENV['DB_NAME'] ?? $_ENV['PGDATABASE'] ?? 'postgres';
-            $user = $_ENV['DB_USER'] ?? $_ENV['PGUSER'] ?? 'postgres';
-            $pass = $_ENV['DB_PASS'] ?? $_ENV['PGPASSWORD'] ?? '';
-            $port = $_ENV['DB_PORT'] ?? $_ENV['PGPORT'] ?? '5432';
-            $sslmode = $_ENV['DB_SSLMODE'] ?? 'require';
+            // Final fallback to PG* environment variables
+            $host = $_ENV['PGHOST'] ?? 'localhost';
+            $dbname = $_ENV['PGDATABASE'] ?? 'postgres';
+            $user = $_ENV['PGUSER'] ?? 'postgres';
+            $pass = $_ENV['PGPASSWORD'] ?? '';
+            $port = $_ENV['PGPORT'] ?? '5432';
+            $sslmode = 'require';
         }
 
         try {
