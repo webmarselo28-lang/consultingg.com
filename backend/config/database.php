@@ -5,8 +5,11 @@ class Database {
     private static $instance = null;
 
     private function __construct() {
-        // Priority: Use SuperHosting discrete DB_* variables if DB_HOST is set, otherwise fall back to DATABASE_URL
-        if (isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST'])) {
+        // Priority: For SuperHosting deployment, use discrete DB_* variables if DB_HOST is set
+        // For Replit testing, prefer DATABASE_URL unless FORCE_DISCRETE_DB_CONFIG=true
+        $useDiscreteConfig = (isset($_ENV['FORCE_DISCRETE_DB_CONFIG']) && $_ENV['FORCE_DISCRETE_DB_CONFIG'] === 'true');
+        
+        if ($useDiscreteConfig && isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST'])) {
             // Use individual SuperHosting environment variables - NO HARDCODED CREDENTIALS
             $host = $_ENV['DB_HOST'];
             $dbname = $_ENV['DB_NAME'] ?? 'postgres';

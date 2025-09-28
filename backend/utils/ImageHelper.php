@@ -81,23 +81,28 @@ class ImageHelper {
     }
     
     /**
-     * Build fully qualified image URL
+     * Build fully qualified image URL - environment aware
      */
     public static function buildImageUrl($relativePath, $addCacheBust = true) {
         if (empty($relativePath)) {
             return null;
         }
         
-        // Get base URL from environment - use Replit dev domain for development
-        $baseUrl = $_ENV['APP_URL'] ?? null;
+        // Priority: Use PUBLIC_BASE_URL for cross-environment compatibility
+        $baseUrl = $_ENV['PUBLIC_BASE_URL'] ?? null;
         
         if (!$baseUrl) {
-            // Development: use Replit domain with port 5000
-            if (isset($_ENV['REPLIT_DEV_DOMAIN'])) {
-                $baseUrl = 'https://' . $_ENV['REPLIT_DEV_DOMAIN'];
-            } else {
-                // Fallback to localhost for local development
-                $baseUrl = 'http://localhost:5000';
+            // Fallback 1: Use APP_URL if available
+            $baseUrl = $_ENV['APP_URL'] ?? null;
+            
+            if (!$baseUrl) {
+                // Fallback 2: Development auto-detection
+                if (isset($_ENV['REPLIT_DEV_DOMAIN'])) {
+                    $baseUrl = 'https://' . $_ENV['REPLIT_DEV_DOMAIN'];
+                } else {
+                    // Fallback 3: localhost for local development
+                    $baseUrl = 'http://localhost:5000';
+                }
             }
         }
         
@@ -122,6 +127,52 @@ class ImageHelper {
         }
         
         return $fullUrl;
+    }
+    
+    /**
+     * Check if image file exists and return appropriate URL with fallback support
+     */
+    public static function buildImageUrlWithFallback($relativePath, $addCacheBust = true) {
+        if (empty($relativePath)) {
+            return null;
+        }
+        
+        // Try primary URL first
+        $primaryUrl = self::buildImageUrl($relativePath, $addCacheBust);
+        
+        // Check if file exists locally
+        $localPath = self::getLocalImagePath($relativePath);
+        if (file_exists($localPath)) {
+            return $primaryUrl;
+        }
+        
+        // If file doesn't exist locally and fallback is enabled, try SuperHosting URL
+        if (isset($_ENV['ALLOW_REMOTE_UPLOADS_FALLBACK']) && $_ENV['ALLOW_REMOTE_UPLOADS_FALLBACK'] === 'true') {
+            $superhostingBaseUrl = 'https://consultingg.com';
+            
+            // Ensure path starts with /
+            if (!str_starts_with($relativePath, '/')) {
+                $relativePath = '/' . $relativePath;
+            }
+            
+            // Encode path segments
+            $pathParts = explode('/', trim($relativePath, '/'));
+            $encodedParts = array_map('rawurlencode', $pathParts);
+            $encodedPath = '/' . implode('/', $encodedParts);
+            
+            return $superhostingBaseUrl . $encodedPath;
+        }
+        
+        // Return primary URL even if file doesn't exist (will result in 404)
+        return $primaryUrl;
+    }
+    
+    /**
+     * Get local filesystem path for image
+     */
+    private static function getLocalImagePath($relativePath) {
+        $uploadsBase = $_ENV['UPLOADS_FS_BASE'] ?? realpath(__DIR__ . '/../../uploads') ?: __DIR__ . '/../../uploads';
+        return rtrim($uploadsBase, '/') . '/' . ltrim($relativePath, '/');
     }
     
     /**

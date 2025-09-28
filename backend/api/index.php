@@ -18,19 +18,28 @@ ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 error_reporting(E_ALL);
 
-// Load environment variables from backend/.env
-$envFile = __DIR__ . '/../.env';
-if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
-            list($key, $value) = explode('=', $line, 2);
-            $_ENV[trim($key)] = trim($value);
+// Load environment variables - prioritize .env.replit for development
+$envFiles = [
+    __DIR__ . '/../.env.replit',  // Development specific
+    __DIR__ . '/../.env'         // Production/SuperHosting
+];
+
+foreach ($envFiles as $envFile) {
+    if (file_exists($envFile)) {
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
+                list($key, $value) = explode('=', $line, 2);
+                $_ENV[trim($key)] = trim($value);
+            }
         }
+        error_log("[CONFIG] Loaded environment variables from: $envFile");
+        break; // Use first found env file
     }
-    error_log("[CONFIG] Loaded environment variables from: $envFile");
-} else {
-    error_log("[CONFIG] Warning: No backend/.env file found. Using Replit environment variables.");
+}
+
+if (!file_exists($envFiles[0]) && !file_exists($envFiles[1])) {
+    error_log("[CONFIG] Warning: No .env or .env.replit file found. Using system environment variables.");
 }
 
 // Set WebContainer environment flag for demo mode
