@@ -17,7 +17,6 @@ import { PagesList } from './components/admin/PagesList';
 import { PageForm } from './components/admin/PageForm';
 import { SectionsList } from './components/admin/SectionsList';
 import { SectionForm } from './components/admin/SectionForm';
-import { SupabaseTest } from './components/SupabaseTest';
 
 const HomePage = () => (
   <div>
@@ -62,9 +61,6 @@ function App() {
               <Route path="/admin/sections" element={<SectionsList />} />
               <Route path="/admin/sections/new" element={<SectionForm />} />
               <Route path="/admin/sections/:id/edit" element={<SectionForm />} />
-              
-              {/* Supabase Test Route */}
-              <Route path="/supabase-test" element={<SupabaseTest />} />
             </Routes>
           </main>
           <Footer />
