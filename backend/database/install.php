@@ -15,11 +15,12 @@ if (file_exists(__DIR__ . '/../.env')) {
     }
 }
 
-$host = $_ENV['DB_HOST'] ?? 'db.mveeovfztfczibtvkpas.supabase.co';
-$username = $_ENV['DB_USER'] ?? 'postgres';
-$password = $_ENV['DB_PASS'] ?? '';
-$database = $_ENV['DB_NAME'] ?? 'postgres';
-$port = $_ENV['DB_PORT'] ?? '5432';
+// Use Replit's PostgreSQL database environment variables
+$host = $_ENV['PGHOST'] ?? getenv('PGHOST') ?? 'localhost';
+$username = $_ENV['PGUSER'] ?? getenv('PGUSER') ?? 'postgres';
+$password = $_ENV['PGPASSWORD'] ?? getenv('PGPASSWORD') ?? '';
+$database = $_ENV['PGDATABASE'] ?? getenv('PGDATABASE') ?? 'postgres';
+$port = $_ENV['PGPORT'] ?? getenv('PGPORT') ?? '5432';
 
 try {
     // Connect to PostgreSQL server
