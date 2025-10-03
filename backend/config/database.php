@@ -5,20 +5,18 @@ class Database {
     private static $instance = null;
 
     private function __construct() {
-        // Priority: For SuperHosting deployment, use discrete DB_* variables if DB_HOST is set
-        // For Replit testing, prefer DATABASE_URL unless FORCE_DISCRETE_DB_CONFIG=true
-        $useDiscreteConfig = (isset($_ENV['FORCE_DISCRETE_DB_CONFIG']) && $_ENV['FORCE_DISCRETE_DB_CONFIG'] === 'true');
-        
-        if ($useDiscreteConfig && isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST'])) {
-            // Use individual SuperHosting environment variables - NO HARDCODED CREDENTIALS
+        // Priority 1: For SuperHosting/Production, use discrete DB_* variables (Supabase)
+        if (isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST'])) {
             $host = $_ENV['DB_HOST'];
-            $dbname = $_ENV['DB_NAME'] ?? 'postgres';
-            $user = $_ENV['DB_USER'] ?? 'postgres';
-            $pass = $_ENV['DB_PASS'] ?? '';
+            $dbname = $_ENV['DB_DATABASE'] ?? $_ENV['DB_NAME'] ?? 'postgres';
+            $user = $_ENV['DB_USERNAME'] ?? $_ENV['DB_USER'] ?? 'postgres';
+            $pass = $_ENV['DB_PASSWORD'] ?? $_ENV['DB_PASS'] ?? '';
             $port = $_ENV['DB_PORT'] ?? '5432';
-            $sslmode = $_ENV['DB_SSLMODE'] ?? 'require';
+            $sslmode = 'require'; // Always use SSL for Supabase
+            
+            error_log('[DB] Using Supabase/Production configuration from DB_* environment variables');
         } else if (isset($_ENV['DATABASE_URL']) && !empty($_ENV['DATABASE_URL'])) {
-            // Parse DATABASE_URL if available (Replit style)
+            // Priority 2: Parse DATABASE_URL if available (Replit development)
             $dbUrl = parse_url($_ENV['DATABASE_URL']);
             $host = $dbUrl['host'] ?? 'localhost';
             $port = $dbUrl['port'] ?? '5432';
@@ -26,14 +24,18 @@ class Database {
             $user = $dbUrl['user'] ?? 'postgres';
             $pass = $dbUrl['pass'] ?? '';
             $sslmode = 'require';
+            
+            error_log('[DB] Using Replit DATABASE_URL configuration');
         } else {
-            // Final fallback to PG* environment variables
+            // Priority 3: Fallback to PG* environment variables
             $host = $_ENV['PGHOST'] ?? 'localhost';
             $dbname = $_ENV['PGDATABASE'] ?? 'postgres';
             $user = $_ENV['PGUSER'] ?? 'postgres';
             $pass = $_ENV['PGPASSWORD'] ?? '';
             $port = $_ENV['PGPORT'] ?? '5432';
             $sslmode = 'require';
+            
+            error_log('[DB] Using PG* environment variables as fallback');
         }
 
         try {
