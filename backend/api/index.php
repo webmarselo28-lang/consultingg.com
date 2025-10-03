@@ -42,10 +42,6 @@ if (!file_exists($envFiles[0]) && !file_exists($envFiles[1])) {
     error_log("[CONFIG] Warning: No .env or .env.replit file found. Using system environment variables.");
 }
 
-// Debug: Log DB-related environment variables
-error_log("[CONFIG] DB_HOST=" . ($_ENV['DB_HOST'] ?? 'not set'));
-error_log("[CONFIG] DATABASE_URL=" . (isset($_ENV['DATABASE_URL']) ? 'set' : 'not set'));
-
 // Set WebContainer environment flag for demo mode
 if (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'bolt.new') !== false) {
     $_ENV['WEBCONTAINER_ENV'] = 'true';
