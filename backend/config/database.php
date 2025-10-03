@@ -6,7 +6,8 @@ class Database {
 
     private function __construct() {
         // Priority 1: For SuperHosting/Production, use discrete DB_* variables (Supabase)
-        if (isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST'])) {
+        // Skip DB_HOST if it's 'localhost' since Replit doesn't have local PostgreSQL on localhost:5432
+        if (isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST']) && $_ENV['DB_HOST'] !== 'localhost') {
             $host = $_ENV['DB_HOST'];
             $dbname = $_ENV['DB_DATABASE'] ?? $_ENV['DB_NAME'] ?? 'postgres';
             $user = $_ENV['DB_USERNAME'] ?? $_ENV['DB_USER'] ?? 'postgres';
@@ -15,6 +16,7 @@ class Database {
             $sslmode = 'require'; // Always use SSL for Supabase
             
             error_log('[DB] Using Supabase/Production configuration from DB_* environment variables');
+            error_log('[DB] DB_HOST: ' . $host . ', DB_PORT: ' . $port . ', DB_NAME: ' . $dbname);
         } else if (isset($_ENV['DATABASE_URL']) && !empty($_ENV['DATABASE_URL'])) {
             // Priority 2: Parse DATABASE_URL if available (Replit development)
             $dbUrl = parse_url($_ENV['DATABASE_URL']);
