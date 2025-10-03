@@ -29,11 +29,19 @@ Preferred communication style: Simple, everyday language.
 - **Security**: CORS configuration, input validation, and SQL injection protection
 
 ### Database Design
-- **Primary Database**: PostgreSQL (Supabase cloud-hosted)
+- **Primary Database**: PostgreSQL (Replit-hosted for development)
+- **External Database**: Supabase PostgreSQL configured for production deployment
 - **Migration Path**: Successfully migrated from MySQL to PostgreSQL
 - **Schema**: Normalized database with properties, property_images, users, pages, sections, and services tables
 - **Features**: UUID primary keys, JSONB for flexible data, Row Level Security (RLS)
 - **Indexes**: Optimized indexes for search performance
+
+#### Database Configuration Notes
+- **Replit Environment**: Uses Replit's internal PostgreSQL database (DATABASE_URL) for development
+- **Supabase Integration**: Frontend Supabase client configured with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+- **Production**: External Supabase database available for deployment outside Replit environment
+- **Network Limitation**: Replit's current environment cannot directly connect to external databases like Supabase
+- **Data Migration**: Database dump created and imported to Supabase for future production use
 
 ### File Structure
 - **Frontend**: Standard React/TypeScript structure in `/src`

@@ -5,17 +5,12 @@ class Database {
     private static $instance = null;
 
     private function __construct() {
-        // Priority 1: Check for Supabase configuration via SUPABASE_DB_PASSWORD
-        if (isset($_ENV['SUPABASE_DB_PASSWORD']) && !empty($_ENV['SUPABASE_DB_PASSWORD'])) {
-            // Use Supabase environment variables
-            $host = 'db.gtvcakkgqlpfdivpejmi.supabase.co';
-            $dbname = 'postgres';
-            $user = 'postgres';
-            $pass = $_ENV['SUPABASE_DB_PASSWORD'];
-            $port = '5432';
-            $sslmode = 'require';
-        } else if (isset($_ENV['FORCE_DISCRETE_DB_CONFIG']) && $_ENV['FORCE_DISCRETE_DB_CONFIG'] === 'true' && isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST'])) {
-            // Priority 2: For SuperHosting deployment, use discrete DB_* variables if DB_HOST is set
+        // Priority: For SuperHosting deployment, use discrete DB_* variables if DB_HOST is set
+        // For Replit testing, prefer DATABASE_URL unless FORCE_DISCRETE_DB_CONFIG=true
+        $useDiscreteConfig = (isset($_ENV['FORCE_DISCRETE_DB_CONFIG']) && $_ENV['FORCE_DISCRETE_DB_CONFIG'] === 'true');
+        
+        if ($useDiscreteConfig && isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST'])) {
+            // Use individual SuperHosting environment variables - NO HARDCODED CREDENTIALS
             $host = $_ENV['DB_HOST'];
             $dbname = $_ENV['DB_NAME'] ?? 'postgres';
             $user = $_ENV['DB_USER'] ?? 'postgres';
