@@ -10,11 +10,11 @@ class Database {
         $useDiscreteConfig = (isset($_ENV['FORCE_DISCRETE_DB_CONFIG']) && $_ENV['FORCE_DISCRETE_DB_CONFIG'] === 'true');
         
         if ($useDiscreteConfig && isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST'])) {
-            // Use individual SuperHosting environment variables - NO HARDCODED CREDENTIALS
+            // Use individual SuperHosting/Supabase environment variables - NO HARDCODED CREDENTIALS
             $host = $_ENV['DB_HOST'];
             $dbname = $_ENV['DB_NAME'] ?? 'postgres';
             $user = $_ENV['DB_USER'] ?? 'postgres';
-            $pass = $_ENV['DB_PASS'] ?? '';
+            $pass = $_ENV['DB_PASS'] ?? $_ENV['SUPABASE_DB_PASSWORD'] ?? '';
             $port = $_ENV['DB_PORT'] ?? '5432';
             $sslmode = $_ENV['DB_SSLMODE'] ?? 'require';
         } else if (isset($_ENV['DATABASE_URL']) && !empty($_ENV['DATABASE_URL'])) {
