@@ -1,5 +1,17 @@
 <?php
-// Load CORS configuration first
+// Load Composer autoloader first
+require_once __DIR__ . '/../vendor/autoload.php';
+
+// Load environment variables with Dotenv
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
+try {
+    $dotenv->load();
+    error_log("[CONFIG] Loaded environment variables from .env");
+} catch (Exception $e) {
+    error_log("[CONFIG] Warning: No .env file found. Using system environment variables.");
+}
+
+// Load CORS configuration
 require_once __DIR__ . '/../config/cors.php';
 
 // Ensure clean output buffer
@@ -17,30 +29,6 @@ header('Pragma: no-cache');
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 error_reporting(E_ALL);
-
-// Load environment variables - prioritize .env.replit for development
-$envFiles = [
-    __DIR__ . '/../.env.replit',  // Development specific
-    __DIR__ . '/../.env'         // Production/SuperHosting
-];
-
-foreach ($envFiles as $envFile) {
-    if (file_exists($envFile)) {
-        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        foreach ($lines as $line) {
-            if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
-                list($key, $value) = explode('=', $line, 2);
-                $_ENV[trim($key)] = trim($value);
-            }
-        }
-        error_log("[CONFIG] Loaded environment variables from: $envFile");
-        break; // Use first found env file
-    }
-}
-
-if (!file_exists($envFiles[0]) && !file_exists($envFiles[1])) {
-    error_log("[CONFIG] Warning: No .env or .env.replit file found. Using system environment variables.");
-}
 
 // Set WebContainer environment flag for demo mode
 if (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'bolt.new') !== false) {
