@@ -1,56 +1,43 @@
 # ConsultingG Real Estate Backend - Apache Configuration for SuperHosting.bg
-# This file configures routing, CORS, security, and API access
+# Domain: consultingg.com | Supabase PostgreSQL
 
-RewriteEngine On
-RewriteBase /backend/
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /backend/
 
-# Pass Authorization header to PHP (required for JWT authentication)
-SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
-RewriteCond %{HTTP:Authorization} .
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    # Pass Authorization header to PHP (required for JWT authentication)
+    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+    RewriteCond %{HTTP:Authorization} .+
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-# Handle OPTIONS preflight requests (CORS)
-RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^api/(.*)$ - [R=204,L]
+    # Handle OPTIONS preflight requests (CORS)
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^api/(.*)$ - [R=204,L]
 
-# API Routes - Forward all /backend/api/* requests to /backend/api/index.php
-# Health check
-RewriteRule ^api/health/?$ api/index.php [QSA,L]
-
-# Auth routes
-RewriteRule ^api/auth/login/?$ api/index.php [QSA,L]
-RewriteRule ^api/auth/logout/?$ api/index.php [QSA,L]
-RewriteRule ^api/auth/me/?$ api/index.php [QSA,L]
-
-# Properties routes
-RewriteRule ^api/properties/stats/?$ api/index.php [QSA,L]
-RewriteRule ^api/properties/([^/]+)/?$ api/index.php [QSA,L]
-RewriteRule ^api/properties/?$ api/index.php [QSA,L]
-
-# Images routes
-RewriteRule ^api/images/upload/?$ api/index.php [QSA,L]
-RewriteRule ^api/images/set-main/?$ api/index.php [QSA,L]
-RewriteRule ^api/images/([^/]+)/?$ api/index.php [QSA,L]
-
-# Documents routes  
-RewriteRule ^api/documents/([^/]+)/?$ api/index.php [QSA,L]
-RewriteRule ^api/documents/?$ api/index.php [QSA,L]
-
-# Services routes
-RewriteRule ^api/services/([^/]+)/?$ api/index.php [QSA,L]
-RewriteRule ^api/services/?$ api/index.php [QSA,L]
-
-# Pages routes
-RewriteRule ^api/pages/slug/([^/]+)/?$ api/index.php [QSA,L]
-RewriteRule ^api/pages/([^/]+)/?$ api/index.php [QSA,L]
-RewriteRule ^api/pages/?$ api/index.php [QSA,L]
-
-# Sections routes
-RewriteRule ^api/sections/([^/]+)/?$ api/index.php [QSA,L]
-RewriteRule ^api/sections/?$ api/index.php [QSA,L]
-
-# Catch-all for any other API routes
-RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+    # API Routes - Forward all /backend/api/* requests to /backend/api/index.php
+    RewriteRule ^api/health/?$ api/index.php [QSA,L]
+    RewriteRule ^api/auth/login/?$ api/index.php [QSA,L]
+    RewriteRule ^api/auth/logout/?$ api/index.php [QSA,L]
+    RewriteRule ^api/auth/me/?$ api/index.php [QSA,L]
+    RewriteRule ^api/properties/stats/?$ api/index.php [QSA,L]
+    RewriteRule ^api/properties/([^/]+)/?$ api/index.php [QSA,L]
+    RewriteRule ^api/properties/?$ api/index.php [QSA,L]
+    RewriteRule ^api/images/upload/?$ api/index.php [QSA,L]
+    RewriteRule ^api/images/set-main/?$ api/index.php [QSA,L]
+    RewriteRule ^api/images/([^/]+)/?$ api/index.php [QSA,L]
+    RewriteRule ^api/documents/([^/]+)/?$ api/index.php [QSA,L]
+    RewriteRule ^api/documents/?$ api/index.php [QSA,L]
+    RewriteRule ^api/services/([^/]+)/?$ api/index.php [QSA,L]
+    RewriteRule ^api/services/?$ api/index.php [QSA,L]
+    RewriteRule ^api/pages/slug/([^/]+)/?$ api/index.php [QSA,L]
+    RewriteRule ^api/pages/([^/]+)/?$ api/index.php [QSA,L]
+    RewriteRule ^api/pages/?$ api/index.php [QSA,L]
+    RewriteRule ^api/sections/([^/]+)/?$ api/index.php [QSA,L]
+    RewriteRule ^api/sections/?$ api/index.php [QSA,L]
+    
+    # Catch-all for any other API routes
+    RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+</IfModule>
 
 # CORS Headers - Allow consultingg.com and www.consultingg.com
 <IfModule mod_headers.c>
@@ -67,9 +54,6 @@ RewriteRule ^api/(.*)$ api/index.php [QSA,L]
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    
-    # Handle OPTIONS preflight with 204 response
-    Header always set Access-Control-Allow-Origin "%{ORIGIN}e" env=ORIGIN
 </IfModule>
 
 # Block access to sensitive files
