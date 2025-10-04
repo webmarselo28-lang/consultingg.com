@@ -22,6 +22,7 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 - **Language**: PHP 8.0+ with object-oriented design
 - **API Design**: RESTful API with centralized routing
+- **Environment Variables**: vlucas/phpdotenv for `.env` file loading
 - **Authentication**: JWT-based authentication using Firebase JWT
 - **File Handling**: Custom image upload and management system
 - **Architecture Pattern**: MVC pattern with controllers, models, and services
@@ -63,8 +64,10 @@ Preferred communication style: Simple, everyday language.
 - **Row Level Security**: Configured for public read access and admin write access
 
 ### PHP Dependencies (Composer)
+- **vlucas/phpdotenv**: Environment variable loading from `.env` files
 - **firebase/php-jwt**: JWT token generation and validation for authentication
 - **ext-pdo**: PostgreSQL database connectivity
+- **ext-pgsql**: PostgreSQL extension
 - **ext-json**: JSON data handling
 - **ext-mbstring**: String manipulation for Bulgarian language support
 - **ext-fileinfo**: File type detection for uploads
@@ -86,7 +89,10 @@ Preferred communication style: Simple, everyday language.
 - **PostCSS/Autoprefixer**: CSS post-processing
 
 ### Hosting Integration
-- **SuperHosting.bg**: Primary deployment target with cPanel integration
-- **Apache/PHP Configuration**: .htaccess rules for clean URLs and API routing
+- **SuperHosting.bg**: Primary deployment target (consultingg.com)
+- **Apache/PHP Configuration**: .htaccess rules for clean URLs, API routing, and MIME types
 - **SSL/HTTPS**: Enforced secure connections with CSP headers
 - **File Permissions**: Proper upload directory permissions for image management
+- **Production Database**: Supabase PostgreSQL (db.gtvcakkgqlpfdivpejmi.supabase.co)
+- **Environment Config**: Production credentials in `backend/.env` file
+- **Deployment Guide**: See `DEPLOY.md` for complete deployment instructions
