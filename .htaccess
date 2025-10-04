@@ -1,83 +1,50 @@
-# ConsultingG Real Estate - Frontend .htaccess for SuperHosting.bg
-# Domain: consultingg.com | Supabase PostgreSQL
+RewriteEngine On
 
-# Security: Block access to sensitive files
+# Serve real files/directories first
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# API to backend
+RewriteRule ^backend/api/?$ backend/api/index.php [L,QSA]
+RewriteRule ^backend/api/(.*)$ backend/api/index.php [L,QSA]
+RewriteRule ^api/?$ backend/api/index.php [L,QSA]
+RewriteRule ^api/(.*)$ backend/api/index.php [L,QSA]
+
+# SPA fallback
+RewriteRule . /index.html [L]
+
+# MIME
+AddType application/javascript .js .mjs
+AddType text/css .css
+AddType application/wasm .wasm
+AddType image/svg+xml .svg
+AddType image/webp .webp
+AddType font/woff2 .woff2
+AddType font/woff .woff
+AddType application/json .json
+
+# Security
 <FilesMatch "\.(env|git|htaccess|htpasswd)">
-    Require all denied
+  Require all denied
 </FilesMatch>
-
 <Files "composer.*">
-    Require all denied
+  Require all denied
 </Files>
-
 <Files "package*.json">
-    Require all denied
+  Require all denied
 </Files>
 
-# Correct MIME types for JavaScript modules
-<IfModule mod_mime.c>
-    AddType application/javascript .js .mjs
-    AddType text/css .css
-    AddType image/svg+xml .svg
-    AddType image/webp .webp
-    AddType font/woff2 .woff2
-    AddType font/woff .woff
-    AddType application/json .json
-</IfModule>
-
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-
-    # Force HTTPS
-    RewriteCond %{HTTPS} !=on
-    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
-    # ===== STATIC ASSETS FIRST (CRITICAL) =====
-    # Serve static assets directly with correct MIME types
-    RewriteCond %{REQUEST_URI} \.(js|mjs|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|map|json)$ [NC]
-    RewriteRule ^ - [L]
-
-    # Static file serving for uploads
-    RewriteRule ^uploads/(.*)$ uploads/$1 [L]
-
-    # ===== API ROUTING =====
-    # Route /backend/api requests to backend/api/index.php
-    RewriteRule ^backend/api/?$ backend/api/index.php [L,QSA]
-    RewriteRule ^backend/api/(.*)$ backend/api/index.php [L,QSA]
-    
-    # Legacy API routing support
-    RewriteRule ^api/?$ backend/api/index.php [L,QSA]
-    RewriteRule ^api/(.*)$ backend/api/index.php [L,QSA]
-
-    # Handle OPTIONS preflight requests
-    RewriteCond %{REQUEST_METHOD} OPTIONS
-    RewriteRule ^(api|backend/api)/(.*)$ backend/api/index.php [L]
-
-    # SPA fallback - All non-file/directory requests go to index.html
-    RewriteCond %{REQUEST_URI} !^/backend/
-    RewriteCond %{REQUEST_URI} !^/api/
-    RewriteCond %{REQUEST_URI} !^/uploads/
-    RewriteCond %{REQUEST_URI} !^/assets/
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule . /index.html [L]
-</IfModule>
-
-# Cache control for static assets
 <IfModule mod_headers.c>
-    # Disable caching for HTML
-    <FilesMatch "\.(html|htm)$">
-        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
-        Header set Pragma "no-cache"
-    </FilesMatch>
-
-    # Cache static assets
-    <FilesMatch "\.(js|mjs|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot)$">
-        Header set Cache-Control "public, max-age=2592000"
-    </FilesMatch>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+  </FilesMatch>
+  <FilesMatch "\.(js|mjs|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
 </IfModule>
 
-# Compression
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
 </IfModule>

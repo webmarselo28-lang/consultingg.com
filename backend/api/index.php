@@ -1,15 +1,7 @@
 <?php
-// Load Composer autoloader first
 require_once __DIR__ . '/../vendor/autoload.php';
-
-// Load environment variables with Dotenv
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-try {
-    $dotenv->load();
-    error_log("[CONFIG] Loaded environment variables from .env");
-} catch (Exception $e) {
-    error_log("[CONFIG] Warning: No .env file found. Using system environment variables.");
-}
+Dotenv\Dotenv::createImmutable(__DIR__ . '/..')->load();
+header('Content-Type: application/json; charset=utf-8');
 
 // Load CORS configuration
 require_once __DIR__ . '/../config/cors.php';
@@ -19,8 +11,7 @@ if (ob_get_level()) {
     ob_end_clean();
 }
 
-// === Unified JSON/CORS headers (single block) ===
-header('Content-Type: application/json; charset=utf-8');
+// Additional headers
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 

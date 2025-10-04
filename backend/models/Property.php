@@ -236,6 +236,44 @@ class Property {
         return $this->getByIdOrCode($code, true);
     }
 
+    public function findOne(string $identifier): ?array {
+      $identifier = trim($identifier);
+      $where = " (p.id::text = :ident OR p.property_code = :ident) ";
+      $sql = "
+        SELECT
+          p.id, p.property_code, p.title, p.description, p.price, p.currency,
+          p.transaction_type, p.property_type, p.city_region, p.district, p.address, p.area,
+          p.bedrooms, p.bathrooms, p.floors, p.floor_number, p.terraces, p.construction_type,
+          p.condition_type, p.heating, p.exposure, p.year_built, p.furnishing_level,
+          p.has_elevator, p.has_garage, p.has_southern_exposure, p.new_construction,
+          p.featured, p.active, p.created_at, p.updated_at,
+          COALESCE((
+            SELECT json_agg(
+              json_build_object(
+                'id', pi.id,
+                'property_id', pi.property_id,
+                'image_url', pi.image_url,
+                'image_path', pi.image_path,
+                'is_main', pi.is_main,
+                'sort_order', pi.sort_order,
+                'alt_text', pi.alt_text
+              )
+              ORDER BY pi.is_main DESC, pi.sort_order ASC
+            )
+            FROM property_images pi
+            WHERE pi.property_id = p.id
+          ), '[]') AS images
+        FROM properties p
+        WHERE {$where}
+        LIMIT 1
+      ";
+      $stmt = $this->conn->prepare($sql);
+      $stmt->bindValue(':ident', $identifier);
+      $stmt->execute();
+      $row = $stmt->fetch(PDO::FETCH_ASSOC);
+      return $row ?: null;
+    }
+
     private function getByIdOrCode($identifier, $preferCode = false) {
         error_log("Property::getByIdOrCode called with identifier: " . $identifier);
         

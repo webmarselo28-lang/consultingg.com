@@ -1,87 +1,32 @@
-# ConsultingG Real Estate Backend - Apache Configuration for SuperHosting.bg
-# Domain: consultingg.com | Supabase PostgreSQL
+RewriteEngine On
+RewriteBase /backend/
 
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteBase /backend/
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+RewriteCond %{HTTP:Authorization} .+
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # Pass Authorization header to PHP (required for JWT authentication)
-    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
-    RewriteCond %{HTTP:Authorization} .+
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^api/(.*)$ - [R=204,L]
 
-    # Handle OPTIONS preflight requests (CORS)
-    RewriteCond %{REQUEST_METHOD} OPTIONS
-    RewriteRule ^api/(.*)$ - [R=204,L]
+RewriteRule ^api/.*$ api/index.php [QSA,L]
 
-    # API Routes - Forward all /backend/api/* requests to /backend/api/index.php
-    RewriteRule ^api/health/?$ api/index.php [QSA,L]
-    RewriteRule ^api/auth/login/?$ api/index.php [QSA,L]
-    RewriteRule ^api/auth/logout/?$ api/index.php [QSA,L]
-    RewriteRule ^api/auth/me/?$ api/index.php [QSA,L]
-    RewriteRule ^api/properties/stats/?$ api/index.php [QSA,L]
-    RewriteRule ^api/properties/([^/]+)/?$ api/index.php [QSA,L]
-    RewriteRule ^api/properties/?$ api/index.php [QSA,L]
-    RewriteRule ^api/images/upload/?$ api/index.php [QSA,L]
-    RewriteRule ^api/images/set-main/?$ api/index.php [QSA,L]
-    RewriteRule ^api/images/([^/]+)/?$ api/index.php [QSA,L]
-    RewriteRule ^api/documents/([^/]+)/?$ api/index.php [QSA,L]
-    RewriteRule ^api/documents/?$ api/index.php [QSA,L]
-    RewriteRule ^api/services/([^/]+)/?$ api/index.php [QSA,L]
-    RewriteRule ^api/services/?$ api/index.php [QSA,L]
-    RewriteRule ^api/pages/slug/([^/]+)/?$ api/index.php [QSA,L]
-    RewriteRule ^api/pages/([^/]+)/?$ api/index.php [QSA,L]
-    RewriteRule ^api/pages/?$ api/index.php [QSA,L]
-    RewriteRule ^api/sections/([^/]+)/?$ api/index.php [QSA,L]
-    RewriteRule ^api/sections/?$ api/index.php [QSA,L]
-    
-    # Catch-all for any other API routes
-    RewriteRule ^api/(.*)$ api/index.php [QSA,L]
-</IfModule>
-
-# CORS Headers - Allow consultingg.com and www.consultingg.com
 <IfModule mod_headers.c>
-    # Allow both main domain and www subdomain
-    SetEnvIf Origin "^https?://(www\.)?consultingg\.com$" ORIGIN=$0
-    Header always set Access-Control-Allow-Origin "%{ORIGIN}e" env=ORIGIN
-    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" env=ORIGIN
-    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With" env=ORIGIN
-    Header always set Access-Control-Allow-Credentials "true" env=ORIGIN
-    Header always set Access-Control-Max-Age "3600" env=ORIGIN
-    
-    # Security Headers
-    Header always set X-Content-Type-Options "nosniff"
-    Header always set X-Frame-Options "SAMEORIGIN"
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Access-Control-Allow-Origin "https://consultingg.com"
+  Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+  Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+  Header always set Access-Control-Allow-Credentials "true"
+  Header always set Access-Control-Max-Age "3600"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# Block access to sensitive files
-<FilesMatch "\.(env|env\.replit|sql|dump|md|lock|log|bak|config|dist|sh)$">
-    Require all denied
+<FilesMatch "\.(env|sql|dump|md|lock|log|bak|config|dist|sh)$">
+  Require all denied
 </FilesMatch>
-
-# Also block specific sensitive files
 <FilesMatch "^(composer\.json|composer\.lock|package\.json|package-lock\.json|\.gitignore|\.htaccess)$">
-    Require all denied
+  Require all denied
 </FilesMatch>
 
-# Prevent directory browsing
 Options -Indexes +FollowSymLinks
-
-# PHP Settings (if mod_php is available)
-<IfModule mod_php.c>
-    php_value memory_limit 256M
-    php_value upload_max_filesize 10M
-    php_value post_max_size 12M
-    php_value max_execution_time 300
-    php_value max_input_vars 3000
-    php_flag display_errors Off
-    php_flag log_errors On
-    php_value error_log /home/consultingg/error_log
-</IfModule>
-
-# PHP 8+ Settings (if using CGI/FastCGI)
-<IfModule mod_fcgid.c>
-    FcgidMaxRequestLen 15728640
-</IfModule>

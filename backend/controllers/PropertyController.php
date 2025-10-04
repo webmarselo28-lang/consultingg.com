@@ -57,38 +57,28 @@ class PropertyController {
         exit;
     }
 
-    public function getById($id) {
-        try {
-            $property = $this->propertyModel->getById($id);
-
-            if (!$property) {
-                http_response_code(404);
-                echo json_encode(['success' => false, 'error' => 'Property not found']);
-                exit;
-            }
-
-            // If accessed by UUID but property has a canonical code, redirect to canonical URL
-            if ($id !== $property['property_code'] && !preg_match('/^prop-[0-9]+$/', $id)) {
-                $canonicalUrl = '/api/properties/' . $property['property_code'];
-                header('Location: ' . $canonicalUrl, true, 301);
-                echo json_encode([
-                    'success' => true,
-                    'redirect' => $canonicalUrl,
-                    'message' => 'Property moved to canonical URL'
-                ]);
-                exit;
-            }
-
-            echo json_encode([
-                'success' => true,
-                'data' => $property
-            ]);
-        } catch (Throwable $e) {
-            error_log('[PropertyController@getById] ' . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(['success' => false, 'error' => 'Server error']);
+    public function getById(string $idOrSlug): void {
+      try {
+        $idOrSlug = trim($idOrSlug);
+        if ($idOrSlug === '' || $idOrSlug === 'undefined' || $idOrSlug === 'null') {
+          http_response_code(400);
+          echo json_encode(['success' => false, 'error' => 'Missing or invalid property identifier']);
+          return;
         }
-        exit;
+        $property = $this->propertyModel->findOne($idOrSlug);
+        if (!$property) {
+          http_response_code(404);
+          echo json_encode(['success' => false, 'error' => 'Property not found']);
+          return;
+        }
+        http_response_code(200);
+        echo json_encode(['success' => true, 'data' => $property], JSON_UNESCAPED_UNICODE);
+      } catch (Throwable $e) {
+        error_log('[PropertyController@getById] ' . $e->getMessage());
+        http_response_code(500);
+        $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? 'false') === 'true';
+        echo json_encode(['success' => false, 'error' => 'Server error'] + ($debug ? ['detail' => $e->getMessage()] : []));
+      }
     }
 
     public function create() {
