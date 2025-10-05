@@ -271,6 +271,20 @@ class Property {
       $stmt->bindValue(':ident', $identifier);
       $stmt->execute();
       $row = $stmt->fetch(PDO::FETCH_ASSOC);
+      
+      if ($row) {
+        // Decode images JSON string to array
+        if (is_string($row['images'])) {
+          $row['images'] = json_decode($row['images'], true) ?: [];
+        } elseif (!is_array($row['images'])) {
+          $row['images'] = [];
+        }
+        
+        // Process images with ImageHelper
+        require_once __DIR__ . '/../utils/ImageHelper.php';
+        $row['images'] = ImageHelper::processImages($row['images']);
+      }
+      
       return $row ?: null;
     }
 

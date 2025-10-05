@@ -20,22 +20,32 @@ export const PropertyDetail: React.FC = () => {
 
   useEffect(() => {
     const fetchProperty = async () => {
-      if (!id) return;
+      if (!id) {
+        setError('Липсва идентификатор на имота');
+        setLoading(false);
+        return;
+      }
       
       try {
         setLoading(true);
-        console.log('PropertyDetail: Fetching property', id);
+        setError(null);
         const result = await apiService.getProperty(id);
-        console.log('PropertyDetail: API result', result);
+        
         if (result.success && result.data) {
-          console.log('PropertyDetail: Images received', result.data.images);
-          setProperty(result.data);
+          // Ensure images is always an array
+          const propertyData = {
+            ...result.data,
+            images: Array.isArray(result.data.images) ? result.data.images : []
+          };
+          setProperty(propertyData);
         } else {
-          setError(result.error || 'Грешка при зареждане на имота');
+          const errorMsg = result.error || 'Имотът не е намерен';
+          setError(errorMsg);
         }
       } catch (err) {
-        setError('Грешка при зареждане на имота');
+        const errorMsg = 'Грешка при зареждане на имота';
         console.error('Error fetching property:', err);
+        setError(errorMsg);
       } finally {
         setLoading(false);
       }
@@ -69,9 +79,7 @@ export const PropertyDetail: React.FC = () => {
   }
 
   const images = property.images || [];
-  console.log('PropertyDetail: Final images array', images);
   const currentImage = images[currentImageIndex];
-  console.log('PropertyDetail: Current image', currentImage);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">

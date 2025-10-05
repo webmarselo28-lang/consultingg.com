@@ -15,7 +15,7 @@ interface ScrollableGalleryProps {
 }
 
 export const ScrollableGallery: React.FC<ScrollableGalleryProps> = ({
-  images,
+  images: imagesProp,
   currentImageIndex,
   onImageSelect,
   propertyTitle
@@ -23,6 +23,9 @@ export const ScrollableGallery: React.FC<ScrollableGalleryProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
+
+  // Ensure images is always an array
+  const images = Array.isArray(imagesProp) ? imagesProp : [];
 
   // Check for overflow and update arrow visibility
   const checkOverflow = () => {
