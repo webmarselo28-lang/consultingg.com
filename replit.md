@@ -30,19 +30,22 @@ Preferred communication style: Simple, everyday language.
 - **Security**: CORS configuration, input validation, and SQL injection protection
 
 ### Database Design
-- **Primary Database**: PostgreSQL (Replit-hosted for development)
-- **External Database**: Supabase PostgreSQL configured for production deployment
-- **Migration Path**: Successfully migrated from MySQL to PostgreSQL
+- **Primary Database**: PostgreSQL (Neon Cloud for both development and production)
+- **Previous Databases**: Originally MySQL, migrated to Replit Postgres, now on Neon Cloud
+- **Migration Path**: MySQL → PostgreSQL (Replit) → Neon Cloud PostgreSQL
 - **Schema**: Normalized database with properties, property_images, users, pages, sections, and services tables
-- **Features**: UUID primary keys, JSONB for flexible data, Row Level Security (RLS)
-- **Indexes**: Optimized indexes for search performance
+- **Features**: UUID primary keys, JSONB for flexible data, optimized indexes
+- **Neon Configuration**: ep-noisy-pine-agnly9s.eu-central-1.aws.neon.tech (EU-Central-1)
 
 #### Database Configuration Notes
-- **Replit Environment**: Uses Replit's internal PostgreSQL database (DATABASE_URL) for development
-- **Supabase Integration**: Frontend Supabase client configured with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
-- **Production**: External Supabase database available for deployment outside Replit environment
-- **Network Limitation**: Replit's current environment cannot directly connect to external databases like Supabase
-- **Data Migration**: Database dump created and imported to Supabase for future production use
+- **Development Environment**: Neon PostgreSQL with discrete DB_* environment variables
+- **Production Environment**: Same Neon database (no separate production instance needed)
+- **Replit Environment**: Database exports created in `/exports` directory for backup
+- **SNI Support**: Automatic Neon endpoint injection in `backend/config/database.php`
+- **Connection Method**: Direct host preferred (non-pooler) for maximum compatibility
+- **SSL Mode**: Always required (`sslmode=require`)
+- **Endpoint Auto-Detection**: Code automatically detects `.neon.tech` hosts and injects proper SNI parameters
+- **Fallback Options**: DB_OPTIONS environment variable for manual endpoint override if needed
 
 ### File Structure
 - **Frontend**: Standard React/TypeScript structure in `/src`
@@ -59,9 +62,15 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Database Services
-- **Supabase PostgreSQL**: Cloud-hosted PostgreSQL database with built-in auth and real-time features
-- **Connection Details**: Uses environment variables for secure configuration
-- **Row Level Security**: Configured for public read access and admin write access
+- **Neon PostgreSQL (Primary)**: Cloud-hosted serverless PostgreSQL database
+  - **Host**: ep-noisy-pine-agnly9s.eu-central-1.aws.neon.tech (Direct, non-pooler)
+  - **Region**: EU-Central-1 (AWS Frankfurt)
+  - **Database**: neondb
+  - **SNI Support**: Auto-detected and configured in backend/config/database.php
+  - **Connection Test**: Available at `/backend/db_neon_check.php`
+  - **Backup**: Database exports stored in `/exports` directory
+- **Supabase (Frontend Only)**: Used for frontend Supabase client features if needed
+  - **Connection**: Frontend configured with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 
 ### PHP Dependencies (Composer)
 - **vlucas/phpdotenv**: Environment variable loading from `.env` files
@@ -93,6 +102,9 @@ Preferred communication style: Simple, everyday language.
 - **Apache/PHP Configuration**: .htaccess rules for clean URLs, API routing, and MIME types
 - **SSL/HTTPS**: Enforced secure connections with CSP headers
 - **File Permissions**: Proper upload directory permissions for image management
-- **Production Database**: Supabase PostgreSQL (db.gtvcakkgqlpfdivpejmi.supabase.co)
-- **Environment Config**: Production credentials in `backend/.env` file
+- **Production Database**: Neon PostgreSQL (ep-noisy-pine-agnly9s.eu-central-1.aws.neon.tech)
+- **Database SNI**: Automatic endpoint injection for Neon compatibility
+- **PHP Extensions Required**: pdo_pgsql, pgsql, mbstring, json, fileinfo (enable in cPanel)
+- **Environment Config**: Production template in `backend/.env.example.production`
+- **Health Checks**: `/backend/db_test.php`, `/backend/db_neon_check.php`, `/api/`
 - **Deployment Guide**: See `DEPLOY.md` for complete deployment instructions

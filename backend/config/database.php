@@ -41,14 +41,39 @@ class Database {
         }
 
         try {
+            // Build DSN with Neon SNI support
+            $extra = $_ENV['DB_OPTIONS'] ?? '';
+            $sslmode = $_ENV['DB_SSLMODE'] ?? $sslmode ?? 'require';
+            $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode={$sslmode}";
+            
+            // Append extra options if provided
+            if (!empty($extra)) {
+                $dsn .= ';' . $extra;
+            }
+            
+            // Auto-inject Neon endpoint for .neon.tech hosts (SNI requirement)
+            $isNeon = (strpos($host, '.neon.tech') !== false);
+            if ($isNeon && stripos($dsn, 'options=endpoint=') === false) {
+                $firstLabel = strtok($host, '.');  // e.g. ep-noisy-pine-agnly9s[-pooler]
+                $endpointId = preg_replace('/-pooler$/', '', $firstLabel); // strip -pooler if present
+                if (strpos($endpointId, 'ep-') === 0) {
+                    $dsn .= ';options=endpoint=' . $endpointId . ';channel_binding=disable';
+                    if (stripos($dsn, 'sslmode=') === false) {
+                        $dsn .= ';sslmode=require';
+                    }
+                    error_log('[DB] Neon SNI: Auto-injected endpoint=' . $endpointId);
+                }
+            }
+            
             $this->connection = new PDO(
-                "pgsql:host={$host};port={$port};dbname={$dbname};sslmode={$sslmode}",
+                $dsn,
                 $user,
                 $pass,
                 [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                    PDO::ATTR_TIMEOUT => 15
                 ]
             );
             

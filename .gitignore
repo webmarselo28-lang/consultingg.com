@@ -86,3 +86,4 @@ DEPLOY*.md
 DEPLOYMENT*.md
 MIGRATION*.md
 DIAGNOSTIC*.mdbackend/.env
+exports/
