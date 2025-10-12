@@ -54,6 +54,8 @@ coverage/
 .env.development.local
 .env.test.local
 .env.production.local
+SUPERHOSTING_CREDENTIALS.txt
+*CREDENTIALS*
 
 # PHP and Composer
 vendor/

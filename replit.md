@@ -30,22 +30,36 @@ Preferred communication style: Simple, everyday language.
 - **Security**: CORS configuration, input validation, and SQL injection protection
 
 ### Database Design
-- **Primary Database**: PostgreSQL (Neon Cloud for both development and production)
-- **Previous Databases**: Originally MySQL, migrated to Replit Postgres, now on Neon Cloud
-- **Migration Path**: MySQL → PostgreSQL (Replit) → Neon Cloud PostgreSQL
-- **Schema**: Normalized database with properties, property_images, users, pages, sections, and services tables
-- **Features**: UUID primary keys, JSONB for flexible data, optimized indexes
-- **Neon Configuration**: ep-noisy-pine-agnly9s.eu-central-1.aws.neon.tech (EU-Central-1)
+- **Production Database**: MySQL 5.7+ on SuperHosting.bg (yogahonc_consultingg78)
+- **Development Database**: PostgreSQL (Replit DATABASE_URL)
+- **Migration History**: MySQL → PostgreSQL (Replit) → Neon Cloud PostgreSQL → MySQL (SuperHosting.bg)
+- **Schema**: Normalized database with properties, property_images, property_documents, users, pages, sections, and services tables
+- **Features**: UUID primary keys (CHAR(36)), optimized indexes, foreign key constraints
+- **Multi-Database Support**: Backend supports both PostgreSQL and MySQL via DB_CONNECTION environment variable
 
 #### Database Configuration Notes
-- **Development Environment**: Neon PostgreSQL with discrete DB_* environment variables
-- **Production Environment**: Same Neon database (no separate production instance needed)
-- **Replit Environment**: Database exports created in `/exports` directory for backup
-- **SNI Support**: Automatic Neon endpoint injection in `backend/config/database.php`
-- **Connection Method**: Direct host preferred (non-pooler) for maximum compatibility
-- **SSL Mode**: Always required (`sslmode=require`)
-- **Endpoint Auto-Detection**: Code automatically detects `.neon.tech` hosts and injects proper SNI parameters
-- **Fallback Options**: DB_OPTIONS environment variable for manual endpoint override if needed
+- **Development (Replit)**: PostgreSQL via DATABASE_URL (automatic)
+- **Production (SuperHosting)**: MySQL via DB_CONNECTION=mysql and discrete DB_* variables
+- **Database Exports**: Full exports available in `/exports` directory
+  - PostgreSQL dumps: replit_db.dump (binary), replit_db.sql (SQL)
+  - MySQL schema: mysql_schema.sql
+  - CSV exports: properties, property_images, users, pages, services
+- **Migration Documentation**: See MYSQL_MIGRATION.md for complete SuperHosting deployment guide
+- **Connection Test Scripts**: 
+  - MySQL: backend/db_mysql_check.php
+  - PostgreSQL: backend/db_neon_check.php
+
+#### MySQL Migration (October 2025)
+- **Target**: SuperHosting.bg with MySQL for production deployment
+- **Schema Conversion**: All PostgreSQL-specific features converted to MySQL
+  - BOOLEAN → TINYINT(1)
+  - NUMERIC → DECIMAL  
+  - TIMESTAMP → DATETIME
+  - ILIKE → LIKE
+  - Removed RETURNING clauses (use UUID generation)
+- **Backend Updates**: Models refactored to be database-agnostic
+- **Configuration**: backend/config/database.php supports both PostgreSQL and MySQL
+- **Status**: Migration complete, production-ready, architect-approved
 
 ### File Structure
 - **Frontend**: Standard React/TypeScript structure in `/src`
