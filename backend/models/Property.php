@@ -133,11 +133,11 @@ class Property {
         // Apply filters
         if (!empty($filters['keyword'])) {
             $query .= " AND (
-                p.title ILIKE :keyword_like
-                OR p.description ILIKE :keyword_like
-                OR p.city_region ILIKE :keyword_like
-                OR p.district ILIKE :keyword_like
-                OR p.address ILIKE :keyword_like
+                p.title LIKE :keyword_like
+                OR p.description LIKE :keyword_like
+                OR p.city_region LIKE :keyword_like
+                OR p.district LIKE :keyword_like
+                OR p.address LIKE :keyword_like
             )";
             $params[':keyword_like'] = '%' . $filters['keyword'] . '%';
         }
@@ -238,7 +238,7 @@ class Property {
 
     public function findOne(string $identifier): ?array {
       $identifier = trim($identifier);
-      $where = " (p.id::text = :ident OR p.property_code = :ident) ";
+      $where = " (p.id = :ident OR p.property_code = :ident) ";
       $sql = "
         SELECT
           p.id, p.property_code, p.title, p.description, p.price, p.currency,
@@ -488,11 +488,11 @@ class Property {
 
         if (!empty($filters['keyword'])) {
             $where[] = '(
-                p.title ILIKE :keyword_like
-                OR p.description ILIKE :keyword_like
-                OR p.city_region ILIKE :keyword_like
-                OR p.district ILIKE :keyword_like
-                OR p.address ILIKE :keyword_like
+                p.title LIKE :keyword_like
+                OR p.description LIKE :keyword_like
+                OR p.city_region LIKE :keyword_like
+                OR p.district LIKE :keyword_like
+                OR p.address LIKE :keyword_like
             )';
             $params[':keyword_like'] = '%' . $filters['keyword'] . '%';
         }

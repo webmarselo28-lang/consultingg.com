@@ -11,15 +11,17 @@ class Document {
     }
 
     public function create($data) {
-        // Use RETURNING clause for PostgreSQL to get the generated UUID
+        // Generate UUID for new document (MySQL-compatible)
+        $data['id'] = $this->generateUUID();
+        
         $query = "INSERT INTO " . $this->table_name . " 
-                  (property_id, filename, original_filename, file_path, file_size, mime_type) 
+                  (id, property_id, filename, original_filename, file_path, file_size, mime_type) 
                   VALUES 
-                  (:property_id, :filename, :original_filename, :file_path, :file_size, :mime_type)
-                  RETURNING id";
+                  (:id, :property_id, :filename, :original_filename, :file_path, :file_size, :mime_type)";
 
         $stmt = $this->conn->prepare($query);
         
+        $stmt->bindParam(':id', $data['id']);
         $stmt->bindParam(':property_id', $data['property_id']);
         $stmt->bindParam(':filename', $data['filename']);
         $stmt->bindParam(':original_filename', $data['original_filename']);
@@ -28,8 +30,7 @@ class Document {
         $stmt->bindParam(':mime_type', $data['mime_type']);
 
         if ($stmt->execute()) {
-            $documentId = $stmt->fetchColumn();
-            return $documentId ? $documentId : false;
+            return $data['id'];
         }
         return false;
     }
@@ -70,6 +71,16 @@ class Document {
         $stmt->bindParam(':id', $id);
         
         return $stmt->execute();
+    }
+
+    private function generateUUID() {
+        return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
     }
 }
 ?>

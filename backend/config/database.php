@@ -5,6 +5,59 @@ class Database {
     private static $instance = null;
 
     private function __construct() {
+        // Determine database connection type (mysql or pgsql)
+        $dbConnection = $_ENV['DB_CONNECTION'] ?? 'pgsql';
+        
+        if ($dbConnection === 'mysql') {
+            $this->connectMySQL();
+        } else {
+            $this->connectPostgreSQL();
+        }
+    }
+
+    private function connectMySQL() {
+        // MySQL configuration for SuperHosting
+        $host = $_ENV['DB_HOST'] ?? 'localhost';
+        $port = $_ENV['DB_PORT'] ?? '3306';
+        $dbname = $_ENV['DB_DATABASE'] ?? $_ENV['DB_NAME'] ?? 'consultingg';
+        $user = $_ENV['DB_USERNAME'] ?? $_ENV['DB_USER'] ?? 'root';
+        $pass = $_ENV['DB_PASSWORD'] ?? $_ENV['DB_PASS'] ?? '';
+        $charset = $_ENV['DB_CHARSET'] ?? 'utf8mb4';
+        $collation = $_ENV['DB_COLLATION'] ?? 'utf8mb4_unicode_ci';
+        
+        error_log('[DB] Using MySQL configuration');
+        error_log('[DB] Host: ' . $host . ', Port: ' . $port . ', Database: ' . $dbname);
+        
+        try {
+            $dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset={$charset}";
+            
+            $this->connection = new PDO(
+                $dsn,
+                $user,
+                $pass,
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES {$charset} COLLATE {$collation}",
+                    PDO::ATTR_TIMEOUT => 15
+                ]
+            );
+            
+            // Set MySQL session variables
+            $this->connection->exec("SET sql_mode='NO_AUTO_VALUE_ON_ZERO,NO_ZERO_DATE'");
+            $this->connection->exec("SET time_zone='+00:00'");
+            
+            if (isset($_ENV['APP_DEBUG']) && $_ENV['APP_DEBUG'] === 'true') {
+                error_log('[DB] Connected successfully to MySQL: ' . $dbname . ' on ' . $host);
+            }
+        } catch (PDOException $exception) {
+            error_log('[DB] MySQL connection failed: ' . $exception->getMessage());
+            throw new Exception("Database connection failed");
+        }
+    }
+
+    private function connectPostgreSQL() {
         // Priority 1: For SuperHosting/Production, use discrete DB_* variables (Supabase)
         // Skip DB_HOST if it's 'localhost' since Replit doesn't have local PostgreSQL on localhost:5432
         if (isset($_ENV['DB_HOST']) && !empty($_ENV['DB_HOST']) && $_ENV['DB_HOST'] !== 'localhost') {
