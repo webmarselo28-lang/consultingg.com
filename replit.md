@@ -113,12 +113,17 @@ Preferred communication style: Simple, everyday language.
 
 ### Hosting Integration
 - **SuperHosting.bg**: Primary deployment target (consultingg.com)
+  - **Server Path**: `/home/yogahonc/consultingg.com/`
+  - **Database**: MySQL `yogahonc_consultingg78` on localhost
+  - **Domain**: https://consultingg.com
 - **Apache/PHP Configuration**: .htaccess rules for clean URLs, API routing, and MIME types
 - **SSL/HTTPS**: Enforced secure connections with CSP headers
 - **File Permissions**: Proper upload directory permissions for image management
-- **Production Database**: Neon PostgreSQL (ep-noisy-pine-agnly9s.eu-central-1.aws.neon.tech)
-- **Database SNI**: Automatic endpoint injection for Neon compatibility
-- **PHP Extensions Required**: pdo_pgsql, pgsql, mbstring, json, fileinfo (enable in cPanel)
-- **Environment Config**: Production template in `backend/.env.example.production`
-- **Health Checks**: `/backend/db_test.php`, `/backend/db_neon_check.php`, `/api/`
-- **Deployment Guide**: See `DEPLOY.md` for complete deployment instructions
+- **Production Database**: MySQL 5.7+ on SuperHosting localhost
+- **PHP Extensions Required**: pdo_mysql, mysqli, mbstring, json, fileinfo (enable in cPanel)
+- **Environment Config**: Production templates:
+  - `backend/.env.example.consultingg` - MySQL configuration for consultingg.com
+  - `backend/.htaccess.consultingg` - CORS for consultingg.com
+- **Health Checks**: `/backend/db_test.php`, `/api/`
+- **Deployment Guide**: See `DEPLOY_CONSULTINGG.md` for complete deployment instructions
+- **Quick Deploy**: Run `./QUICK_DEPLOY.sh` to prepare deployment package
