@@ -114,18 +114,7 @@ class Property {
                          p.construction_type, p.condition_type, p.heating, p.exposure, 
                          p.year_built, p.furnishing_level, p.has_elevator, p.has_garage, 
                          p.has_southern_exposure, p.new_construction, p.featured, p.active, 
-                         p.sort_order, p.created_at, p.updated_at,
-                         COALESCE(
-                            (SELECT json_agg(
-                                json_build_object(
-                                    'id', pi.id,
-                                    'image_url', pi.image_url,
-                                    'is_main', pi.is_main,
-                                    'sort_order', pi.sort_order
-                                ) ORDER BY pi.is_main DESC, pi.sort_order ASC
-                            ) FROM property_images pi WHERE pi.property_id = p.id),
-                            '[]'::json
-                         ) as images
+                         p.sort_order, p.created_at, p.updated_at
                   FROM " . $this->table_name . " p WHERE true";
 
         $params = [];
@@ -210,17 +199,9 @@ class Property {
         $stmt->execute();
         $properties = $stmt->fetchAll();
 
-        // Parse JSON images
+        // Fetch images separately for each property
         foreach ($properties as &$property) {
-            if (is_string($property['images'])) {
-                $property['images'] = json_decode($property['images'], true) ?: [];
-            } elseif (!is_array($property['images'])) {
-                $property['images'] = [];
-            }
-            
-            // Process images with ImageHelper
-            require_once __DIR__ . '/../utils/ImageHelper.php';
-            $property['images'] = ImageHelper::processImages($property['images']);
+            $property['images'] = $this->getImagesForProperty($property['id']);
         }
 
         return $properties;
@@ -246,23 +227,7 @@ class Property {
           p.bedrooms, p.bathrooms, p.floors, p.floor_number, p.terraces, p.construction_type,
           p.condition_type, p.heating, p.exposure, p.year_built, p.furnishing_level,
           p.has_elevator, p.has_garage, p.has_southern_exposure, p.new_construction,
-          p.featured, p.active, p.created_at, p.updated_at,
-          COALESCE((
-            SELECT json_agg(
-              json_build_object(
-                'id', pi.id,
-                'property_id', pi.property_id,
-                'image_url', pi.image_url,
-                'image_path', pi.image_path,
-                'is_main', pi.is_main,
-                'sort_order', pi.sort_order,
-                'alt_text', pi.alt_text
-              )
-              ORDER BY pi.is_main DESC, pi.sort_order ASC
-            )
-            FROM property_images pi
-            WHERE pi.property_id = p.id
-          ), '[]') AS images
+          p.featured, p.active, p.created_at, p.updated_at
         FROM properties p
         WHERE {$where}
         LIMIT 1
@@ -273,16 +238,8 @@ class Property {
       $row = $stmt->fetch(PDO::FETCH_ASSOC);
       
       if ($row) {
-        // Decode images JSON string to array
-        if (is_string($row['images'])) {
-          $row['images'] = json_decode($row['images'], true) ?: [];
-        } elseif (!is_array($row['images'])) {
-          $row['images'] = [];
-        }
-        
-        // Process images with ImageHelper
-        require_once __DIR__ . '/../utils/ImageHelper.php';
-        $row['images'] = ImageHelper::processImages($row['images']);
+        // Fetch images separately
+        $row['images'] = $this->getImagesForProperty($row['id']);
       }
       
       return $row ?: null;
@@ -309,21 +266,7 @@ class Property {
                          p.construction_type, p.condition_type, p.heating, p.exposure, 
                          p.year_built, p.furnishing_level, p.has_elevator, p.has_garage, 
                          p.has_southern_exposure, p.new_construction, p.featured, p.active, 
-                         p.created_at, p.updated_at,
-                         COALESCE(
-                            (SELECT json_agg(
-                                json_build_object(
-                                    'id', pi.id,
-                                    'property_id', pi.property_id,
-                                    'image_url', pi.image_url,
-                                    'image_path', pi.image_path,
-                                    'is_main', pi.is_main,
-                                    'sort_order', pi.sort_order,
-                                    'alt_text', pi.alt_text
-                                ) ORDER BY pi.is_main DESC, pi.sort_order ASC
-                            ) FROM property_images pi WHERE pi.property_id = p.id),
-                            '[]'::json
-                         ) as images
+                         p.created_at, p.updated_at
                   FROM " . $this->table_name . " p WHERE " . $whereClause;
 
         $stmt = $this->conn->prepare($query);
@@ -333,15 +276,8 @@ class Property {
         $property = $stmt->fetch();
         error_log("Query executed. Property found: " . ($property ? 'YES' : 'NO'));
         if ($property) {
-            if (is_string($property['images'])) {
-                $property['images'] = json_decode($property['images'], true) ?: [];
-            } elseif (!is_array($property['images'])) {
-                $property['images'] = [];
-            }
-            
-            // Process images with ImageHelper
-            require_once __DIR__ . '/../utils/ImageHelper.php';
-            $property['images'] = ImageHelper::processImages($property['images']);
+            // Fetch images separately
+            $property['images'] = $this->getImagesForProperty($property['id']);
             
             // Add documents
             require_once __DIR__ . '/Document.php';
@@ -553,28 +489,14 @@ class Property {
         $stmt->execute();
         $total = (int)$stmt->fetchColumn();
 
-        // DATA query with images
+        // DATA query without images
         $sql = "SELECT p.id, p.property_code, p.title, p.description, p.price, p.currency, p.transaction_type, 
                        p.property_type, p.city_region, p.district, p.address, p.area, 
                        p.bedrooms, p.bathrooms, p.floors, p.floor_number, p.terraces, 
                        p.construction_type, p.condition_type, p.heating, p.exposure, 
                        p.year_built, p.furnishing_level, p.has_elevator, p.has_garage, 
                        p.has_southern_exposure, p.new_construction, p.featured, p.active, 
-                       p.sort_order, p.created_at, p.updated_at,
-                       COALESCE(
-                          (SELECT json_agg(
-                              json_build_object(
-                                  'id', pi.id,
-                                  'property_id', pi.property_id,
-                                  'image_url', pi.image_url,
-                                  'image_path', pi.image_path,
-                                  'is_main', pi.is_main,
-                                  'sort_order', pi.sort_order,
-                                  'alt_text', pi.alt_text
-                              ) ORDER BY pi.sort_order ASC, pi.is_main DESC
-                          ) FROM property_images pi WHERE pi.property_id = p.id),
-                          '[]'::json
-                       ) as images
+                       p.sort_order, p.created_at, p.updated_at
                 FROM " . $this->table_name . " p 
                 WHERE $whereSql
                 ORDER BY (p.sort_order IS NULL), p.sort_order ASC, p.created_at DESC, p.id ASC
@@ -589,17 +511,9 @@ class Property {
         $stmt->execute();
         $items = $stmt->fetchAll();
 
-        // Parse JSON images
+        // Fetch images separately for each property
         foreach ($items as &$item) {
-            if (is_string($item['images'])) {
-                $item['images'] = json_decode($item['images'], true) ?: [];
-            } elseif (!is_array($item['images'])) {
-                $item['images'] = [];
-            }
-            
-            // Process images with ImageHelper
-            require_once __DIR__ . '/../utils/ImageHelper.php';
-            $item['images'] = ImageHelper::processImages($item['images']);
+            $item['images'] = $this->getImagesForProperty($item['id']);
         }
 
         return ['items' => $items, 'total' => $total];
@@ -700,6 +614,23 @@ class Property {
             error_log('[PROPERTY] Update sort orders error: ' . $e->getMessage());
             return false;
         }
+    }
+
+    private function getImagesForProperty($propertyId) {
+        $query = "SELECT id, property_id, image_url, image_path, is_main, sort_order, alt_text 
+                  FROM property_images 
+                  WHERE property_id = :property_id 
+                  ORDER BY is_main DESC, sort_order ASC";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':property_id', $propertyId);
+        $stmt->execute();
+        
+        $images = $stmt->fetchAll();
+        
+        // Process images with ImageHelper
+        require_once __DIR__ . '/../utils/ImageHelper.php';
+        return ImageHelper::processImages($images);
     }
 }
 ?>
