@@ -358,6 +358,300 @@ class SupabaseService {
       return { success: false, error: 'Failed to fetch statistics' };
     }
   }
+
+  // =============================================================
+  // CMS FUNCTIONS - Sections, Pages, Services Management
+  // =============================================================
+
+  // SECTIONS MANAGEMENT
+  async getSections(filters?: { page_slug?: string; type?: string; active?: boolean }) {
+    try {
+      let query = supabase
+        .from('sections')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (filters?.page_slug) {
+        query = query.eq('page_slug', filters.page_slug);
+      }
+
+      if (filters?.type) {
+        query = query.eq('type', filters.type);
+      }
+
+      if (filters?.active !== undefined) {
+        query = query.eq('active', filters.active);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('Error fetching sections:', error);
+      return { success: false, error: 'Failed to fetch sections' };
+    }
+  }
+
+  async getSection(id: string) {
+    try {
+      const { data, error } = await supabase
+        .from('sections')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error fetching section:', error);
+      return { success: false, error: 'Failed to fetch section' };
+    }
+  }
+
+  async createSection(sectionData: any) {
+    try {
+      const { data, error } = await supabase
+        .from('sections')
+        .insert(sectionData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error creating section:', error);
+      return { success: false, error: 'Failed to create section' };
+    }
+  }
+
+  async updateSection(id: string, updates: any) {
+    try {
+      const { data, error } = await supabase
+        .from('sections')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error updating section:', error);
+      return { success: false, error: 'Failed to update section' };
+    }
+  }
+
+  async deleteSection(id: string) {
+    try {
+      const { error } = await supabase
+        .from('sections')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting section:', error);
+      return { success: false, error: 'Failed to delete section' };
+    }
+  }
+
+  async reorderSections(updates: Array<{ id: string; sort_order: number }>) {
+    try {
+      const promises = updates.map(({ id, sort_order }) =>
+        supabase
+          .from('sections')
+          .update({ sort_order })
+          .eq('id', id)
+      );
+
+      await Promise.all(promises);
+      return { success: true };
+    } catch (error) {
+      console.error('Error reordering sections:', error);
+      return { success: false, error: 'Failed to reorder sections' };
+    }
+  }
+
+  // PAGES MANAGEMENT (Admin)
+  async createPage(pageData: any) {
+    try {
+      const { data, error } = await supabase
+        .from('pages')
+        .insert(pageData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error creating page:', error);
+      return { success: false, error: 'Failed to create page' };
+    }
+  }
+
+  async updatePage(id: string, updates: any) {
+    try {
+      const { data, error } = await supabase
+        .from('pages')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error updating page:', error);
+      return { success: false, error: 'Failed to update page' };
+    }
+  }
+
+  async deletePage(id: string) {
+    try {
+      const { error } = await supabase
+        .from('pages')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting page:', error);
+      return { success: false, error: 'Failed to delete page' };
+    }
+  }
+
+  // SERVICES MANAGEMENT (Admin)
+  async getService(id: string) {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error fetching service:', error);
+      return { success: false, error: 'Failed to fetch service' };
+    }
+  }
+
+  async createService(serviceData: any) {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .insert(serviceData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error creating service:', error);
+      return { success: false, error: 'Failed to create service' };
+    }
+  }
+
+  async updateService(id: string, updates: any) {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error updating service:', error);
+      return { success: false, error: 'Failed to update service' };
+    }
+  }
+
+  async deleteService(id: string) {
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      return { success: false, error: 'Failed to delete service' };
+    }
+  }
+
+  async reorderServices(updates: Array<{ id: string; sort_order: number }>) {
+    try {
+      const promises = updates.map(({ id, sort_order }) =>
+        supabase
+          .from('services')
+          .update({ sort_order })
+          .eq('id', id)
+      );
+
+      await Promise.all(promises);
+      return { success: true };
+    } catch (error) {
+      console.error('Error reordering services:', error);
+      return { success: false, error: 'Failed to reorder services' };
+    }
+  }
 }
 
 export const supabaseService = new SupabaseService();
