@@ -8,5 +8,79 @@ generator client {
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
+// =============================================================================
+// CMS MODELS - Sections, Pages, Services
+// =============================================================================
+
+model Section {
+  id              String   @id @default(uuid())
+  page_slug       String   @db.VarChar(100)
+  type            String   @db.VarChar(50)
+  title           String?  @db.VarChar(255)
+  subtitle        String?  @db.VarChar(500)
+  content         String?  @db.Text
+  button_text     String?  @db.VarChar(100)
+  button_link     String?  @db.VarChar(255)
+  image_url       String?  @db.VarChar(500)
+  data            Json?
+  active          Boolean  @default(true)
+  sort_order      Int      @default(0)
+  seo_title       String?  @db.VarChar(255)
+  seo_description String?  @db.VarChar(500)
+  seo_keywords    String?  @db.VarChar(500)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@map("sections")
+  @@index([page_slug, active])
+  @@index([sort_order])
+}
+
+model Page {
+  id               String   @id @default(uuid())
+  slug             String   @unique @db.VarChar(100)
+  title            String   @db.VarChar(255)
+  content          String   @db.Text
+  meta_title       String?  @db.VarChar(255)
+  meta_description String?  @db.VarChar(500)
+  meta_keywords    String?  @db.VarChar(500)
+  og_image         String?  @db.VarChar(500)
+  active           Boolean  @default(true)
+  show_in_menu     Boolean  @default(false)
+  menu_order       Int?
+  template         String   @default("default") @db.VarChar(50)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("pages")
+  @@index([slug])
+  @@index([active])
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  title           String   @db.VarChar(255)
+  description     String   @db.Text
+  icon            String   @db.VarChar(100)
+  color           String?  @db.VarChar(50)
+  image_url       String?  @db.VarChar(500)
+  content         String?  @db.Text
+  active          Boolean  @default(true)
+  featured        Boolean  @default(false)
+  sort_order      Int      @default(0)
+  seo_title       String?  @db.VarChar(255)
+  seo_description String?  @db.VarChar(500)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@map("services")
+  @@index([active])
+  @@index([featured])
+  @@index([sort_order])
+}
+
+// =============================================================================
+// PROPERTIES MODELS - Existing models (to be pulled from database)
+// =============================================================================
 // Run: npx prisma db pull
-// To auto-generate schema from existing MySQL database
+// To auto-generate existing Property, PropertyImage, User models from MySQL
