@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
-  origin: ['http://localhost:5000', 'http://localhost:3000', 'https://consultingg.com', 'https://www.consultingg.com'],
+  origin: ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000', 'https://consultingg.com', 'https://www.consultingg.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -24,7 +24,17 @@ app.use(cors({
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use('/uploads', express.static(path.join(process.cwd(), '..', 'uploads')));
+
+// Serve static files from uploads directory with proper CORS and caching
+const uploadsPath = path.join(__dirname, '..', '..', 'uploads');
+logger.info(`📁 Serving static files from: ${uploadsPath}`);
+app.use('/uploads', express.static(uploadsPath, {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+}));
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({
@@ -37,6 +47,15 @@ app.get('/', (_req: Request, res: Response) => {
       properties: '/api/properties',
       images: '/api/images',
     },
+  });
+});
+
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({
+    success: true,
+    message: 'Backend running',
+    uploadsPath: uploadsPath,
+    publicBaseUrl: process.env.PUBLIC_BASE_URL || 'http://localhost:3000',
   });
 });
 
