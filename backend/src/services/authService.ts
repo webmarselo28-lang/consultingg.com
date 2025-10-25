@@ -5,8 +5,8 @@ import { AppError } from '../middleware/errorHandler';
 
 export class AuthService {
   async login(email: string, password: string) {
-    const user = await prisma.users.findFirst({ where: { email, active: true } });
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    const user = await prisma.user.findFirst({ where: { email, active: true } });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new AppError('Invalid credentials', 401);
     }
     const token = generateToken({ userId: user.id, email: user.email, role: user.role || 'user' });
@@ -14,7 +14,7 @@ export class AuthService {
   }
 
   async getCurrentUser(userId: string) {
-    const user = await prisma.users.findUnique({ where: { id: userId }, select: { id: true, email: true, name: true, role: true } });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, name: true, role: true } });
     if (!user) throw new AppError('User not found', 404);
     return user;
   }

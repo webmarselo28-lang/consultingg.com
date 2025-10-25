@@ -80,7 +80,95 @@ model Service {
 }
 
 // =============================================================================
-// PROPERTIES MODELS - Existing models (to be pulled from database)
+// CORE BUSINESS MODELS - Properties, Users, Documents
 // =============================================================================
-// Run: npx prisma db pull
-// To auto-generate existing Property, PropertyImage, User models from MySQL
+
+// USER MODEL (Authentication)
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique @db.VarChar(255)
+  password   String   @db.VarChar(255)
+  name       String?  @db.VarChar(255)
+  role       String   @default("user") @db.VarChar(50)
+  active     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("users")
+  @@index([email])
+}
+
+// PROPERTY MODEL (Core business entity)
+model Property {
+  id               String   @id @default(uuid())
+  property_code    String   @unique @db.VarChar(50)
+  transaction_type String   @db.VarChar(20)
+  property_type    String   @db.VarChar(50)
+  title            String   @db.VarChar(500)
+  description      String?  @db.Text
+  price            Decimal  @db.Decimal(12, 2)
+  area             Decimal? @db.Decimal(10, 2)
+  city_region      String?  @db.VarChar(100)
+  district         String?  @db.VarChar(100)
+  address          String?  @db.VarChar(500)
+  floor            Int?
+  total_floors     Int?
+  rooms            Int?
+  bathrooms        Int?
+  parking          Boolean  @default(false)
+  furnished        Boolean  @default(false)
+  heating          String?  @db.VarChar(100)
+  construction_year Int?
+  features         Json?
+  coordinates      Json?
+  active           Boolean  @default(true)
+  featured         Boolean  @default(false)
+  views            Int      @default(0)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  images    PropertyImage[]
+  documents Document[]
+
+  @@map("properties")
+  @@index([transaction_type, property_type, active])
+  @@index([city_region, district])
+  @@index([price, area])
+  @@index([featured, active])
+  @@index([property_code])
+}
+
+// PROPERTY IMAGE MODEL
+model PropertyImage {
+  id            String   @id @default(uuid())
+  property_id   String
+  image_url     String   @db.VarChar(500)
+  image_path    String   @db.VarChar(500)
+  thumbnail_url String?  @db.VarChar(500)
+  is_main       Boolean  @default(false)
+  sort_order    Int      @default(0)
+  created_at    DateTime @default(now())
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@map("property_images")
+  @@index([property_id])
+  @@index([is_main])
+}
+
+// DOCUMENT MODEL
+model Document {
+  id          String   @id @default(uuid())
+  property_id String
+  title       String   @db.VarChar(255)
+  file_url    String   @db.VarChar(500)
+  file_path   String   @db.VarChar(500)
+  file_type   String   @db.VarChar(50)
+  file_size   Int
+  created_at  DateTime @default(now())
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+  @@index([property_id])
+}

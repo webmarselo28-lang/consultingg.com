@@ -33,14 +33,14 @@ export class PropertyService {
 
     const skip = (page - 1) * limit;
     const [properties, total] = await Promise.all([
-      prisma.properties.findMany({ where, include: { property_images: { orderBy: { sort_order: 'asc' } } }, orderBy: { [sort]: order }, skip, take: limit }),
-      prisma.properties.count({ where })
+      prisma.property.findMany({ where, include: { images: { orderBy: { sort_order: 'asc' } } }, orderBy: { [sort]: order }, skip, take: limit }),
+      prisma.property.count({ where })
     ]);
 
     const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
     const enriched = properties.map((p: any) => ({
       ...p,
-      images: (p.property_images || []).map((img: any) => ({
+      images: (p.images || []).map((img: any) => ({
         ...img,
         url: `${PUBLIC_BASE_URL}${img.image_url}?v=${Date.now()}`,
         thumbnail_url: `${PUBLIC_BASE_URL}${img.image_url.replace(/(\.[^.]+)$/, '_thumb$1')}?v=${Date.now()}`
@@ -51,16 +51,16 @@ export class PropertyService {
   }
 
   async getById(id: string) {
-    const property = await prisma.properties.findFirst({
+    const property = await prisma.property.findFirst({
       where: { OR: [{ id }, { property_code: id }] },
-      include: { property_images: { orderBy: { sort_order: 'asc' } } }
+      include: { images: { orderBy: { sort_order: 'asc' } } }
     });
     if (!property) throw new AppError('Property not found', 404);
 
     const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
     return {
       ...property,
-      images: (property.property_images || []).map((img: any) => ({
+      images: (property.images || []).map((img: any) => ({
         ...img,
         url: `${PUBLIC_BASE_URL}${img.image_url}?v=${Date.now()}`,
         thumbnail_url: `${PUBLIC_BASE_URL}${img.image_url.replace(/(\.[^.]+)$/, '_thumb$1')}?v=${Date.now()}`
@@ -71,31 +71,29 @@ export class PropertyService {
   async create(data: any) {
     const id = generateUUID();
     const property_code = data.property_code || await this.generateNextPropertyCode();
-    const maxSort = await prisma.properties.findFirst({ orderBy: { sort_order: 'desc' }, select: { sort_order: true } });
-    const sort_order = (maxSort?.sort_order || 0) + 1;
 
-    return await prisma.properties.create({
-      data: { id, ...data, property_code, sort_order, active: data.active !== undefined ? data.active : true },
-      include: { property_images: true }
+    return await prisma.property.create({
+      data: { id, ...data, property_code, active: data.active !== undefined ? data.active : true },
+      include: { images: true }
     });
   }
 
   async update(id: string, data: any) {
-    const existing = await prisma.properties.findFirst({ where: { OR: [{ id }, { property_code: id }] } });
+    const existing = await prisma.property.findFirst({ where: { OR: [{ id }, { property_code: id }] } });
     if (!existing) throw new AppError('Property not found', 404);
-    return await prisma.properties.update({ where: { id: existing.id }, data, include: { property_images: true } });
+    return await prisma.property.update({ where: { id: existing.id }, data, include: { images: true } });
   }
 
   async delete(id: string) {
-    const property = await prisma.properties.findFirst({ where: { OR: [{ id }, { property_code: id }] } });
+    const property = await prisma.property.findFirst({ where: { OR: [{ id }, { property_code: id }] } });
     if (!property) throw new AppError('Property not found', 404);
-    await prisma.property_images.deleteMany({ where: { property_id: property.id } });
-    await prisma.properties.delete({ where: { id: property.id } });
+    await prisma.propertyImage.deleteMany({ where: { property_id: property.id } });
+    await prisma.property.delete({ where: { id: property.id } });
     return { success: true, message: 'Property deleted' };
   }
 
   private async generateNextPropertyCode(): Promise<string> {
-    const last = await prisma.properties.findFirst({ where: { property_code: { startsWith: 'prop-' } }, orderBy: { property_code: 'desc' } });
+    const last = await prisma.property.findFirst({ where: { property_code: { startsWith: 'prop-' } }, orderBy: { property_code: 'desc' } });
     if (!last?.property_code) return 'prop-001';
     const match = last.property_code.match(/prop-(\d+)/);
     return match ? `prop-${String(parseInt(match[1], 10) + 1).padStart(3, '0')}` : 'prop-001';
