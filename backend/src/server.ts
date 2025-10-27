@@ -69,8 +69,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Serve static files from uploads directory with proper CORS and caching
-const uploadsPath = path.join(__dirname, '..', '..', 'uploads');
+// PRODUCTION: Use absolute path from environment variable or default to relative
+const uploadsPath = process.env.UPLOADS_DIR || process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads');
 logger.info(`📁 Serving static files from: ${uploadsPath}`);
+
+// Ensure uploads directory exists
+const fs = require('fs');
+if (!fs.existsSync(uploadsPath)) {
+  logger.warn(`⚠️ Uploads directory does not exist: ${uploadsPath}`);
+  logger.info(`Creating uploads directory...`);
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
 app.use('/uploads', express.static(uploadsPath, {
   maxAge: '1d',
   setHeaders: (res, filePath) => {

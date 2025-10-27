@@ -6,7 +6,8 @@ export class ImageHelper {
   private uploadsDir: string;
 
   constructor() {
-    this.uploadsDir = path.join(process.cwd(), '..', 'uploads', 'properties');
+    const baseUploadsDir = process.env.UPLOADS_DIR || process.env.UPLOAD_DIR || path.join(process.cwd(), '..', 'uploads');
+    this.uploadsDir = path.join(baseUploadsDir, 'properties');
   }
 
   async ensurePropertyDirectory(propertyId: string): Promise<string> {
@@ -37,10 +38,13 @@ export class ImageHelper {
 
   async deleteImage(imagePath: string): Promise<void> {
     try {
-      const fullPath = path.join(process.cwd(), '..', imagePath);
+      const baseUploadsDir = process.env.UPLOADS_DIR || process.env.UPLOAD_DIR || path.join(process.cwd(), '..', 'uploads');
+      const cleanPath = imagePath.startsWith('/uploads/') ? imagePath.replace('/uploads/', '') : imagePath;
+      const fullPath = path.join(baseUploadsDir, cleanPath);
       await fs.unlink(fullPath);
       const thumbnailPath = imagePath.replace(/(\.[^.]+)$/, '_thumb$1');
-      try { await fs.unlink(path.join(process.cwd(), '..', thumbnailPath)); } catch {}
+      const cleanThumbPath = thumbnailPath.startsWith('/uploads/') ? thumbnailPath.replace('/uploads/', '') : thumbnailPath;
+      try { await fs.unlink(path.join(baseUploadsDir, cleanThumbPath)); } catch {}
     } catch {}
   }
 
